@@ -1,0 +1,58 @@
+/* src/components/Sidebar/SidebarTree.css */
+
+/* Define your theme colors */
+:root {
+  --color-text: #ffffff;              /* White text for contrast */
+  --color-hover: #6200ee;             /* Slightly lighter grey on hover */
+  --color-selected-bg: #6200ee;       /* Purple background for selected node */
+  --color-focus-outline: #6200ee;     /* Bright purple for focus outline */
+  --color-folder-icon: #ffffff;       /* Lighter purple for folder icons */
+  --color-file-icon: #ffffff;         /* Medium purple for file icons */
+}
+
+/* Tree Node Styles */
+.tree-node {
+  display: flex;
+  align-items: center;
+  height: 36px; /* Should match rowHeight prop */
+  width: 75%;
+  padding: 0 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  color: var(--color-text);
+}
+
+.tree-node:hover {
+  background-color: var(--color-hover);
+}
+
+.tree-node--selected {
+  background-color: var(--color-selected-bg);
+  color: var(--color-text);
+}
+
+.tree-node--folder .tree-node__icon {
+  color: var(--color-folder-icon);
+}
+
+.tree-node--file .tree-node__icon {
+  color: var(--color-file-icon);
+}
+
+.tree-node__icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.tree-node__text {
+  flex: 1;
+  font-size: 14px;
+  color: inherit;
+}
+
+/* Focused Node */
+.tree-node:focus {
+  outline: 1px solid var(--color-focus-outline);
+}
+

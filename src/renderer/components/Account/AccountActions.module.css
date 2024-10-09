@@ -1,0 +1,115 @@
+/* src/renderer/components/Account/AccountActions.module.css */
+
+/* Container for account information */
+.accountInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--color-text);
+}
+
+/* Individual information row */
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-medium);
+}
+
+/* Label styling */
+.label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Value styling */
+.value {
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+/* Button container */
+.buttonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+/* Common button styles */
+.button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-medium);
+  font-weight: 500;
+  transition: background-color var(--transition-medium), transform var(--transition-medium);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  text-align: center;
+}
+
+/* Primary button */
+.primaryButton {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.primaryButton:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.primaryButton:active {
+  transform: translateY(-2px);
+}
+
+/* Secondary button */
+.secondaryButton {
+  background-color: #555555;
+  color: var(--color-white);
+}
+
+.secondaryButton:hover {
+  background-color: #333333;
+}
+
+.secondaryButton:active {
+  transform: translateY(-2px);
+}
+
+/* Logout button */
+.logoutButton {
+  background-color: #e53e3e;
+  color: var(--color-white);
+}
+
+.logoutButton:hover {
+  background-color: #c53030;
+}
+
+.logoutButton:active {
+  transform: translateY(-2px);
+}
+
+/* Error message styling */
+.errorMessage {
+  color: var(--color-error);
+  background-color: var(--color-error-bg);
+  padding: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  border-radius: 4px;
+  text-align: center;
+  font-size: var(--font-size-small);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .accountInfo {
+    gap: var(--spacing-sm);
+  }
+
+  .button {
+    padding: 10px 16px;
+    font-size: var(--font-size-small);
+  }
+}
