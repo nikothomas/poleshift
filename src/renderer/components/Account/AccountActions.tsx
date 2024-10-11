@@ -12,6 +12,7 @@ const AccountActions: React.FC = () => {
   const {
     user,
     userTier,
+    userOrg,
     handleLogout,
     errorMessage,
   } = useAuth();
@@ -26,6 +27,10 @@ const AccountActions: React.FC = () => {
     closeModal();
   };
 
+  function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+
   return (
     <Modal isOpen={showAccountActions} title="Account" onClose={closeModal}>
       <div className={styles.accountInfo}>
@@ -34,8 +39,12 @@ const AccountActions: React.FC = () => {
           <span className={styles.value}>{user?.email}</span>
         </div>
         <div className={styles.infoRow}>
-          <span className={styles.label}>User ID:</span>
-          <span className={styles.value}>{user?.id}</span>
+          <span className={styles.label}>User type:</span>
+          <span className={styles.value}>{capitalizeFirstLetter(userTier)}</span>
+        </div>
+        <div className={styles.infoRow}>
+          <span className={styles.label}>Organization:</span>
+          <span className={styles.value}>{capitalizeFirstLetter(userOrg)}</span>
         </div>
         <div className={styles.infoRow}>
           <span className={styles.label}>Last Sign In:</span>
@@ -44,10 +53,6 @@ const AccountActions: React.FC = () => {
               ? new Date(user.last_sign_in_at).toLocaleString()
               : 'N/A'}
           </span>
-        </div>
-        <div className={styles.infoRow}>
-          <span className={styles.label}>User type:</span>
-          <span className={styles.value}>{userTier}</span>
         </div>
         <div className={styles.buttonContainer}>
           <button
