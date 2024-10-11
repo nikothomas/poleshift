@@ -7,6 +7,9 @@ export interface AuthContextType {
   user: any; // Replace `any` with your user type
   userTier: string | null;
   userLevel: number;
+  userOrg: string | null;
+  userOrgId: string | null; // Added to store org_id (UUID)
+  userOrgShortId: string | null;
   loading: boolean;
   setUser: React.Dispatch<React.SetStateAction<any>>;
   handleLogout: () => Promise<void>;
@@ -14,7 +17,9 @@ export interface AuthContextType {
   setErrorMessage: React.Dispatch<React.SetStateAction<string>>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -22,13 +27,16 @@ interface AuthProviderProps {
 
 const userTierMap: Record<string, number> = {
   admin: 3,
-  manager: 2,
-  employee: 1,
+  lead: 2,
+  researcher: 1,
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<any>(null);
   const [userTier, setUserTier] = useState<string | null>(null);
+  const [userOrg, setUserOrg] = useState<string | null>(null);
+  const [userOrgId, setUserOrgId] = useState<string | null>(null); // New state for org_id
+  const [userOrgShortId, setUserOrgShortId] = useState<string | null>(null);
   const [userLevel, setUserLevel] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -71,37 +79,59 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    const fetchUserTier = async () => {
+    const fetchUserDetails = async () => {
       if (!user) {
         setUserTier(null);
         setUserLevel(0);
+        setUserOrg(null);
+        setUserOrgId(null);
+        setUserOrgShortId(null);
         return;
       }
 
       try {
+        // Fetch user tier and organization info in a single query
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('user_tier')
+          .select(
+            `
+            user_tier,
+            organization:organization_id (
+              id,
+              name,
+              org_short_id
+            )
+          `,
+          )
           .eq('id', user.id)
           .single();
 
         if (error || !data) {
-          console.error('Error fetching user tier:', error);
+          console.error('Error fetching user or organization details:', error);
           setUserTier(null);
           setUserLevel(0);
+          setUserOrg(null);
+          setUserOrgId(null);
+          setUserOrgShortId(null);
         } else {
           setUserTier(data.user_tier);
           const level = userTierMap[data.user_tier] || 0;
           setUserLevel(level);
+          setUserOrg(data.organization?.name || null);
+          setUserOrgId(data.organization?.id || null); // Store org_id (UUID)
+          setUserOrgShortId(data.organization?.org_short_id || null);
         }
       } catch (err) {
-        console.error('Error in fetchUserTier:', err);
+        console.error('Error in fetchUserDetails:', err);
         setUserTier(null);
         setUserLevel(0);
+        setUserOrg(null);
+        setUserOrgId(null);
+        setUserOrgShortId(null);
       }
     };
 
-    fetchUserTier();
+    fetchUserDetails();
   }, [user]);
 
   const handleLogout = async () => {
@@ -113,6 +143,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(null);
       setUserTier(null);
       setUserLevel(0);
+      setUserOrg(null);
+      setUserOrgId(null);
+      setUserOrgShortId(null);
     }
   };
 
@@ -122,6 +155,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         user,
         userTier,
         userLevel,
+        userOrg,
+        userOrgId, // Provide org_id to the context consumers
+        userOrgShortId,
         loading,
         setUser,
         handleLogout,

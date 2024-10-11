@@ -1,3 +1,5 @@
+// src/renderer/contexts/DataContext.tsx
+
 import React, {
   createContext,
   useState,
@@ -14,7 +16,6 @@ export interface Sample {
   id: string;
   name: string;
   data: { [key: string]: any };
-  reports: Report[];
 }
 
 interface SampleData {
@@ -32,7 +33,7 @@ export interface DataContextType extends AppData {
   addItem: (
     type: keyof typeof processFunctions,
     inputs: Record<string, string>,
-  ) => void;
+  ) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(
@@ -50,7 +51,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     throw new Error('DataProvider must be used within an AuthProvider');
   }
 
-  const { user, loading: authLoading } = authContext;
+  const { user, userOrgId, userOrgShortId, loading: authLoading } = authContext;
 
   const [fileTreeData, setFileTreeData] = useState<ExtendedTreeItem[]>([]);
   const [sampleData, setSampleData] = useState<SampleData>({});
@@ -78,7 +79,20 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       if (fileTreeDataResult.success) {
         const parsedFileTreeData = JSON.parse(fileTreeDataResult.value); // Parse the decrypted JSON string
         if (Array.isArray(parsedFileTreeData)) {
-          setFileTreeData(parsedFileTreeData);
+          // Validate each item has an 'id'
+          const validatedFileTreeData = parsedFileTreeData.filter(
+            (item: any) => {
+              if (!item.id || typeof item.id !== 'string') {
+                console.warn(
+                  'Invalid item detected (missing or invalid id):',
+                  item,
+                );
+                return false; // Skip items without a valid 'id'
+              }
+              return true;
+            },
+          );
+          setFileTreeData(validatedFileTreeData);
         } else {
           console.warn(
             'fileTreeData is not an array. Initializing with an empty array.',
@@ -108,6 +122,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   }, [user]);
 
+  /**
+   * Function to save data to Electron Store (with encryption)
+   */
   const saveData = useCallback(async () => {
     if (!user) {
       return;
@@ -140,8 +157,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Error saving data:', error);
     }
-  }, [fileTreeData, sampleData, user]);
+  }, [fileTreeData, getUserKey, sampleData, user]);
 
+  // Debounce the saveData function to prevent excessive writes
   const debouncedSaveData = useCallback(
     debounce(() => {
       saveData();
@@ -171,9 +189,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   }, [user, authLoading]);
 
-// Inside your DataProvider component
   const addItem = useCallback(
-    (
+    async (
       type: keyof typeof processFunctions,
       inputs: Record<string, string>,
     ) => {
@@ -185,11 +202,22 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           );
         }
 
-        // Pass sampleData and inputs to the processing function
-        const newItem: ExtendedTreeItem =
-          type === 'sample'
-            ? processingFunction(inputs, sampleData)
-            : processingFunction(inputs);
+        if (!userOrgId || !userOrgShortId) {
+          throw new Error('User organization information is missing.');
+        }
+
+        // Call the processing function with required parameters
+        const newItem: ExtendedTreeItem = await processingFunction(
+          inputs,
+          sampleData,
+          userOrgId,
+          userOrgShortId,
+        );
+
+        // Ensure the new item has a valid 'id'
+        if (!newItem.id || typeof newItem.id !== 'string') {
+          throw new Error('New item is missing a valid "id" property.');
+        }
 
         setFileTreeData((prevFileTreeData) => [...prevFileTreeData, newItem]);
 
@@ -197,8 +225,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           const newSample: Sample = {
             id: newItem.id,
             name: newItem.text,
-            data: {},
-            reports: [],
+            data: newItem.data || {},
           };
 
           setSampleData((prevSampleData) => ({
@@ -207,15 +234,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           }));
         }
 
-        console.log(
-          `Added new item of type "${type}" with ID: ${newItem.id}`,
-        );
+        console.log(`Added new item of type "${type}" with ID: ${newItem.id}`);
       } catch (error: any) {
         console.error('Error adding item:', error);
         throw error;
       }
     },
-    [sampleData, setFileTreeData, setSampleData],
+    [sampleData, setFileTreeData, setSampleData, userOrgId, userOrgShortId],
   );
 
   return (

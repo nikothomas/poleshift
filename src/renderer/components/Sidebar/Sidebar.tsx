@@ -9,6 +9,7 @@ import SidebarTree from './SidebarTree';
 import useData from '../../hooks/useData';
 import useUI from '../../hooks/useUI';
 import { processFunctions } from '../../utils/sidebarFunctions';
+import { sampleLocations } from '../../config/sampleLocationsConfig.ts';
 import './Sidebar.css';
 
 // Define the shape of the modal state for better type safety
@@ -158,12 +159,18 @@ const Sidebar: React.FC = () => {
     const configItem: ConfigItem = {
       id: 'create-sample',
       modalFields: [
-        { name: 'collectionDate', label: 'Collection Date', type: 'date'},
-        { name: 'loc', label: 'Location', type: 'select', options: [
-          'Neko Harbor',
-            'Nulligans Island',
-          ]},
-        // Add other fields as necessary
+        { name: 'collectionDate', label: 'Collection Date', type: 'date' },
+        {
+          name: 'locCharId',
+          label: 'Location',
+          type: 'select',
+          options: sampleLocations
+            .filter((location) => location.isEnabled)
+            .map((location) => ({
+              value: location.char_id, // Use 'char_id' as the value
+              label: location.label,
+            })),
+        },
       ],
       processFunction: 'sample',
     };

@@ -153,8 +153,8 @@ const Modal: React.FC<ModalProps> = ({
                           Select an option
                         </option>
                         {field.options?.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
+                          <option key={option.value} value={option.value}>
+                            {option.label}
                           </option>
                         ))}
                       </select>
