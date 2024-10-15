@@ -114,6 +114,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUserOrgId(null);
           setUserOrgShortId(null);
         } else {
+          console.log(data);
+          console.log(data.organization?.name);
           setUserTier(data.user_tier);
           const level = userTierMap[data.user_tier] || 0;
           setUserLevel(level);

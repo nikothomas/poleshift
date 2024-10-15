@@ -1,21 +1,15 @@
 // src/renderer/components/Account/AccountActions.tsx
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from '../Modal';
 import useUI from '../../hooks/useUI';
 import useAuth from '../../hooks/useAuth';
 import styles from './AccountActions.module.css'; // Import the CSS module
-import { useNavigate } from 'react-router-dom';
 
 const AccountActions: React.FC = () => {
   const { showAccountActions, setShowAccountActions } = useUI();
-  const {
-    user,
-    userTier,
-    userOrg,
-    handleLogout,
-    errorMessage,
-  } = useAuth();
+  const { user, userTier, userOrg, handleLogout, errorMessage } = useAuth();
   const navigate = useNavigate(); // Initialize useNavigate hook
 
   const closeModal = () => {
@@ -40,7 +34,9 @@ const AccountActions: React.FC = () => {
         </div>
         <div className={styles.infoRow}>
           <span className={styles.label}>User type:</span>
-          <span className={styles.value}>{capitalizeFirstLetter(userTier)}</span>
+          <span className={styles.value}>
+            {capitalizeFirstLetter(userTier)}
+          </span>
         </div>
         <div className={styles.infoRow}>
           <span className={styles.label}>Organization:</span>
@@ -64,7 +60,9 @@ const AccountActions: React.FC = () => {
             Logout
           </button>
         </div>
-        {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
+        {errorMessage && (
+          <div className={styles.errorMessage}>{errorMessage}</div>
+        )}
       </div>
     </Modal>
   );

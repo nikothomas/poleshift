@@ -14,6 +14,54 @@ const Login: React.FC<LoginProps> = ({ onLogin = () => {} }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Function to call the Edge Function to process the license key
+  const callLicenseFunction = async (licenseKey: string) => {
+    try {
+      // Get the current session to obtain the access token
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('User is not authenticated.');
+      }
+
+      // Call the Edge Function with the access token
+      const response = await fetch(
+        'https://poleshift.icarai.cloud/functions/v1/process_license',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`, // Include JWT token
+          },
+          body: JSON.stringify({ licenseKey }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error processing license key.');
+      }
+
+      // License key processed successfully, remove it from localStorage
+      localStorage.removeItem('licenseKey');
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error processing license key:', error.message);
+      return { success: false, error: error.message };
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -28,6 +76,18 @@ const Login: React.FC<LoginProps> = ({ onLogin = () => {} }) => {
       setError(error.message);
       setIsLoading(false);
       return;
+    }
+
+    // Check for license key in localStorage
+    const licenseKey = localStorage.getItem('licenseKey');
+    if (licenseKey) {
+      const result = await callLicenseFunction(licenseKey);
+      if (!result.success) {
+        // Handle error (e.g., display a message)
+        setError(result.error);
+        setIsLoading(false);
+        return; // Stop the login process if license key processing fails
+      }
     }
 
     // Fetch user profile

@@ -10,7 +10,6 @@ import useAuth from '../hooks/useAuth';
 import useData from '../hooks/useData';
 import useUI from '../hooks/useUI';
 import AccountActions from './Account/AccountActions';
-import { getDescendantIds } from '../utils/treeUtils';
 
 const MainApp: React.FC = () => {
   // Authentication hooks
@@ -23,9 +22,10 @@ const MainApp: React.FC = () => {
   // Data hooks
   const {
     fileTreeData,
-    samplingEventData, // Renamed from sampleData
+    samplingEventData,
     setFileTreeData,
-    setSamplingEventData, // Renamed from setSampleData
+    setSamplingEventData,
+    addItem,
     deleteItem, // Retrieved from useData
   } = useData();
 
@@ -50,15 +50,15 @@ const MainApp: React.FC = () => {
    */
   const handleDataProcessed = useCallback(
     (data: any, configItem: any) => {
-      if (selectedItem?.type === 'samplingEvent') { // Updated from 'sample'
-        const samplingEventId = selectedItem.id; // Renamed from sampleId
-        const existingSamplingEvent = samplingEventData[samplingEventId] || { // Updated variable
+      if (selectedItem?.type === 'samplingEvent') {
+        const samplingEventId = selectedItem.id;
+        const existingSamplingEvent = samplingEventData[samplingEventId] || {
           id: samplingEventId,
-          name: selectedItem.data.name,
+          name: selectedItem.text,
           data: {},
-          reports: [],
         };
-        const newSamplingEventData = { // Renamed from newSampleData
+
+        const newSamplingEventData = {
           ...samplingEventData,
           [samplingEventId]: {
             ...existingSamplingEvent,
@@ -68,11 +68,16 @@ const MainApp: React.FC = () => {
             },
           },
         };
-        setSamplingEventData(newSamplingEventData); // Updated function
+
+        setSamplingEventData(newSamplingEventData);
         setLocalErrorMessage('');
       } else {
-        console.error('No sampling event selected or selected item is not a sampling event.'); // Updated message
-        setLocalErrorMessage('Please select a sampling event before uploading data.'); // Updated message
+        console.error(
+          'No sampling event selected or selected item is not a sampling event.',
+        );
+        setLocalErrorMessage(
+          'Please select a sampling event before uploading data.',
+        );
       }
     },
     [selectedItem, samplingEventData, setSamplingEventData],
@@ -87,8 +92,7 @@ const MainApp: React.FC = () => {
     async (itemId: string) => {
       try {
         await deleteItem(itemId); // Delete from database and frontend
-        // Optionally, display a success message to the user
-        alert('Sampling event deleted successfully.');
+        setLocalErrorMessage('');
       } catch (error: any) {
         console.error('Error deleting item:', error);
         setLocalErrorMessage(error.message || 'Failed to delete the item.');
@@ -100,26 +104,28 @@ const MainApp: React.FC = () => {
   // Determine the item name to display in the header
   let itemName = 'Welcome';
   if (selectedItem) {
-    if (selectedItem.type === 'samplingEvent') { // Updated from 'sample'
-      const { name } = selectedItem.data;
-      itemName = name;
+    if (selectedItem.type === 'samplingEvent') {
+      const { text } = selectedItem;
+      itemName = text;
     } else {
       itemName = selectedItem.text;
     }
   }
 
   const samplingEventId =
-    selectedItem && selectedItem.type === 'samplingEvent' ? selectedItem.id : null; // Updated from 'sample'
-  const samplingEvent = samplingEventId ? samplingEventData[samplingEventId] : null; // Renamed from sample
-  const uploadedData = samplingEvent?.data || {}; // Renamed from sample?.data
+    selectedItem && selectedItem.type === 'samplingEvent'
+      ? selectedItem.id
+      : null;
+  const samplingEvent = samplingEventId
+    ? samplingEventData[samplingEventId]
+    : null;
+  const uploadedData = samplingEvent?.data || {};
 
   return (
     <div id="app">
       <ErrorBoundary>
         {/* Sidebar Component */}
-        <Sidebar
-          userTier={userTier}
-        />
+        <Sidebar userTier={userTier} />
 
         {/* Main Content Area */}
         <div className="main-content">
@@ -127,21 +133,21 @@ const MainApp: React.FC = () => {
             <h2 id="item-name">{itemName}</h2>
           </div>
           <div className="content-body">
-            {samplingEventId ? ( // Updated condition
+            {samplingEventId ? (
               <>
                 {localErrorMessage && (
                   <div className="error-message">{localErrorMessage}</div>
                 )}
                 <DropBoxes
                   onDataProcessed={handleDataProcessed}
-                  samplingEventName={itemName} // Updated prop
+                  samplingEventName={itemName}
                   onError={setLocalErrorMessage}
                   uploadedData={uploadedData}
                 />
               </>
             ) : (
               <p className="content-body__text">
-                Select a sampling event from the sidebar to view details. {/* Updated message */}
+                Select a sampling event from the sidebar to view details.
               </p>
             )}
           </div>
@@ -159,7 +165,7 @@ const MainApp: React.FC = () => {
         <ContextMenu
           contextMenuState={contextMenuState}
           setContextMenuState={setContextMenuState}
-          deleteItem={handleDeleteItem} // Use handleDeleteItem
+          deleteItem={handleDeleteItem}
           userTier={userTier}
         />
 

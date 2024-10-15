@@ -1,7 +1,7 @@
 // src/renderer/components/PreAuth/SignUp.tsx
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import supabase from '../../utils/supabaseClient.ts';
 
 const SignUp: React.FC = () => {
@@ -11,52 +11,6 @@ const SignUp: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
-
-  // Function to call the Edge Function to process the license key
-  const callLicenseFunction = async (licenseKey: string) => {
-    try {
-      // Get the current session to obtain the access token
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        throw sessionError;
-      }
-
-      const accessToken = session?.access_token;
-
-      if (!accessToken) {
-        throw new Error('User is not authenticated.');
-      }
-
-      // Call the Edge Function with the access token
-      const response = await fetch(
-        'https://poleshift.icarai.cloud/functions/v1/process_license',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`, // Include JWT token
-          },
-          body: JSON.stringify({ licenseKey }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error processing license key.');
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error processing license key:', error.message);
-      return { success: false, error: error.message };
-    }
-  };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -84,33 +38,14 @@ const SignUp: React.FC = () => {
       return;
     }
 
-    // Check if the user needs to confirm their email
-    if (!data.session) {
-      // Email confirmation is required
-      setMessage(
-        'Sign-up successful! Please check your email to confirm your account before logging in.'
-      );
-      setIsLoading(false);
-      return;
-    }
+    // Store the license key in localStorage for later use
+    localStorage.setItem('licenseKey', licenseKey);
 
-    // After successful sign-up and if email confirmation is not required, process the license key
-    const result = await callLicenseFunction(licenseKey);
-
-    if (result.error) {
-      setError(result.error);
-      setIsLoading(false);
-      return;
-    }
-
-    setMessage('Sign-up successful! You can now log in.');
+    // Email confirmation is required
+    setMessage(
+      'Sign-up successful! Please check your email to confirm your account before logging in.'
+    );
     setIsLoading(false);
-
-    // Optionally, log the user out if you want them to log in again
-    await supabase.auth.signOut();
-
-    // Optionally, navigate to the login page
-    // navigate('/login');
   };
 
   return (
