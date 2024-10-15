@@ -1,6 +1,8 @@
 // src/renderer/components/Sidebar/Sidebar.tsx
 
 import React, { useCallback, useState } from 'react';
+import SyncIcon from '@mui/icons-material/Sync';
+import Tooltip from '@mui/material/Tooltip';
 import Modal from '../Modal';
 import SidebarToggleButton from './SidebarToggleButton';
 import AccountButton from './AccountButton';
@@ -39,7 +41,7 @@ interface ConfigItem {
 
 const Sidebar: React.FC = () => {
   // Use the useData hook to access addItem, fileTreeData, and setFileTreeData
-  const { addItem, fileTreeData, setFileTreeData } = useData();
+  const { addItem, fileTreeData, setFileTreeData, isSyncing } = useData();
 
   // Use the useUI hook to access UI-related state and actions
   const {
@@ -196,6 +198,15 @@ const Sidebar: React.FC = () => {
       {/* Sidebar Toggle Button */}
       <SidebarToggleButton toggleSidebar={toggleSidebar} />
 
+      {/* Syncing Status Icon */}
+      <div className="sync-status-icon">
+        <Tooltip title={isSyncing ? 'Syncing data...' : 'All changes saved'}>
+          <SyncIcon
+            className={`sync-icon ${isSyncing ? 'syncing' : ''}`}
+          />
+        </Tooltip>
+      </div>
+
       {/* Sidebar Container */}
       <div className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Account Button */}
@@ -204,13 +215,13 @@ const Sidebar: React.FC = () => {
         {/* Buttons to Create Sampling Events and Folders */}
         <SidebarButtons
           isSidebarCollapsed={isSidebarCollapsed}
-          onCreateSamplingEvent={handleCreateSamplingEvent} // Updated prop
+          onCreateSamplingEvent={handleCreateSamplingEvent}
           onCreateFolder={handleCreateFolder}
         />
         {/* Tree View of Files and Folders */}
         <SidebarTree
           treeData={fileTreeData}
-          setTreeData={setFileTreeData} // Ensure setTreeData is passed correctly
+          setTreeData={setFileTreeData}
         />
       </div>
 

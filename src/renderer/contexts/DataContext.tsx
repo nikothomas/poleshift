@@ -33,6 +33,7 @@ export interface DataContextType {
     inputs: Record<string, string>,
   ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
+  isSyncing: boolean; // Added to track syncing status
 }
 
 export const DataContext = createContext<DataContextType | undefined>(
@@ -56,6 +57,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [samplingEventData, setSamplingEventData] = useState<SamplingEventData>(
     {},
   );
+  const [isSyncing, setIsSyncing] = useState<boolean>(false); // State to track syncing
 
   /**
    * Function to load tree data from Supabase
@@ -95,6 +97,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       return;
     }
 
+    setIsSyncing(true); // Start syncing
+
     try {
       const { error } = await supabase.from('file_tree').upsert(
         {
@@ -111,6 +115,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error saving tree data:', error);
+    } finally {
+      setIsSyncing(false); // Stop syncing
     }
   }, [user, userOrgId, fileTreeData]);
 
@@ -215,6 +221,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       return;
     }
 
+    setIsSyncing(true); // Start syncing
+
     try {
       const setSamplingEventDataResult = await window.electron.encryptAndStore(
         user.id,
@@ -229,6 +237,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error saving sampling event data:', error);
+    } finally {
+      setIsSyncing(false); // Stop syncing
     }
   }, [samplingEventData, user]);
 
@@ -377,6 +387,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setSamplingEventData,
         addItem,
         deleteItem,
+        isSyncing, // Expose isSyncing state to the context
       }}
     >
       {children}

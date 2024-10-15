@@ -109,3 +109,31 @@
 .sidebar__account-icon {
   font-size: var(--font-size-large);
 }
+
+/* Add styles for the sync status icon */
+.sync-status-icon {
+  position: absolute;
+  top: 10px; /* Adjust positioning as needed */
+  right: 10px;
+}
+
+.sync-icon {
+  font-size: 24px;
+  color: #4caf50; /* Color when not syncing */
+}
+
+.sync-icon.syncing {
+  animation: spin 2s linear infinite;
+  color: #f44336; /* Color when syncing */
+}
+
+/* Animation for spinning effect */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
