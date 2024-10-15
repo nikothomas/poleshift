@@ -9,7 +9,7 @@ import SidebarTree from './SidebarTree';
 import useData from '../../hooks/useData';
 import useUI from '../../hooks/useUI';
 import { processFunctions } from '../../utils/sidebarFunctions';
-import { sampleLocations } from '../../config/sampleLocationsConfig.ts';
+import { sampleLocations } from '../../config/sampleLocationsConfig';
 import './Sidebar.css';
 
 // Define the shape of the modal state for better type safety
@@ -27,13 +27,13 @@ interface ConfigField {
   name: string;
   label: string;
   type: string;
-  options?: string[]; // Add options if needed for select fields
+  options?: { value: string; label: string }[]; // Updated to match the actual options structure
 }
 
 interface ConfigItem {
   id: string;
   modalFields: ConfigField[];
-  processFunction?: keyof typeof processFunctions;
+  processFunction?: keyof typeof processFunctions; // Ensuring type safety with keyof
   processFileFunction?: string; // If applicable
 }
 
@@ -153,11 +153,11 @@ const Sidebar: React.FC = () => {
   };
 
   /**
-   * Initiates the creation of a new sample by opening the modal
+   * Initiates the creation of a new sampling event by opening the modal
    */
-  const handleCreateSample = useCallback(() => {
+  const handleCreateSamplingEvent = useCallback(() => { // Renamed function
     const configItem: ConfigItem = {
-      id: 'create-sample',
+      id: 'create-samplingEvent', // Updated ID for clarity
       modalFields: [
         { name: 'collectionDate', label: 'Collection Date', type: 'date' },
         {
@@ -172,10 +172,10 @@ const Sidebar: React.FC = () => {
             })),
         },
       ],
-      processFunction: 'sample',
+      processFunction: 'samplingEvent', // Updated from 'sample' to 'samplingEvent'
     };
 
-    openModal('Create New Sample', configItem);
+    openModal('Create New Sampling Event', configItem);
   }, [openModal]);
 
   /**
@@ -185,7 +185,7 @@ const Sidebar: React.FC = () => {
     const configItem: ConfigItem = {
       id: 'create-folder',
       modalFields: [{ name: 'name', label: 'Folder Name', type: 'text' }],
-      processFunction: 'processCreateFolder',
+      processFunction: 'folder', // Updated from 'processCreateFolder' to 'folder'
     };
 
     openModal('Create New Folder', configItem);
@@ -201,10 +201,10 @@ const Sidebar: React.FC = () => {
         {/* Account Button */}
         <AccountButton setShowAccountActions={setShowAccountActions} />
 
-        {/* Buttons to Create Samples and Folders */}
+        {/* Buttons to Create Sampling Events and Folders */}
         <SidebarButtons
           isSidebarCollapsed={isSidebarCollapsed}
-          onCreateSample={handleCreateSample}
+          onCreateSamplingEvent={handleCreateSamplingEvent} // Updated prop
           onCreateFolder={handleCreateFolder}
         />
         {/* Tree View of Files and Folders */}
@@ -214,7 +214,7 @@ const Sidebar: React.FC = () => {
         />
       </div>
 
-      {/* Modal for Creating Samples and Folders */}
+      {/* Modal for Creating Sampling Events and Folders */}
       {modalState.isOpen && modalState.configItem && (
         <Modal
           isOpen={modalState.isOpen}
@@ -224,7 +224,7 @@ const Sidebar: React.FC = () => {
           modalInputs={modalState.modalInputs}
           handleModalChange={handleModalChange}
           handleModalSubmit={handleModalSubmit}
-          // Optionally, you can pass `isProcessing` to disable inputs or show a loader
+          isProcessing={modalState.isProcessing} // Optionally, disable inputs or show a loader
         />
       )}
     </>

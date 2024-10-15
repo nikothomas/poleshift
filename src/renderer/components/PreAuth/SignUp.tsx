@@ -2,100 +2,100 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import supabase from '../../utils/supabaseClient.ts';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const [licenseKey, setLicenseKey] = useState<string>(''); // New state for license key
+  const [licenseKey, setLicenseKey] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  interface SignUpResponse {
-    user_id: string;
-    error?: string;
-  }
-
-  // Sign-up function that calls the Edge Function
-  const callSignUpFunction = async (
-    email: string,
-    password: string,
-    licenseKey: string, // Include license key
-  ): Promise<SignUpResponse> => {
+  // Function to call the Edge Function to process the license key
+  const callLicenseFunction = async (licenseKey: string) => {
     try {
+      // Get the current session to obtain the access token
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('User is not authenticated.');
+      }
+
+      // Call the Edge Function with the access token
       const response = await fetch(
-        'https://YOUR_SUPABASE_FUNCTION_URL/signup', // Replace with your actual function URL
+        'https://poleshift.icarai.cloud/functions/v1/process_license',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`, // Include JWT token
           },
-          body: JSON.stringify({ email, password, licenseKey }), // Send license key
-        },
+          body: JSON.stringify({ licenseKey }),
+        }
       );
 
-      // Determine the content type of the response
-      const contentType = response.headers.get('Content-Type');
-
-      let data: any;
-
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        // If not JSON, read as text and throw an error
-        const text = await response.text();
-        console.error('Non-JSON response:', text);
-        throw new Error(`Unexpected response format: ${text}`);
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        // Log detailed error information
-        console.error('Error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          data,
-        });
-
-        // Return the error message from the response
-        return {
-          user_id: '',
-          error: data.error || 'Unknown error',
-        };
+        throw new Error(data.error || 'Error processing license key.');
       }
 
-      // Log successful response
-      console.log('Successful sign-up response:', data);
-
-      // Return the successful response
-      return {
-        user_id: data.user_id,
-      };
-    } catch (err: any) {
-      // Log the full error details
-      console.error('Error calling sign-up function:', err.message);
-      return {
-        user_id: '',
-        error: err.message || 'Internal Server Error',
-      };
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error processing license key:', error.message);
+      return { success: false, error: error.message };
     }
   };
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null); // Reset error state on new submit
-    setMessage(null); // Reset message state on new submit
-    setIsLoading(true); // Start loading
+    setError(null);
+    setMessage(null);
+    setIsLoading(true);
 
-    // Validate email, password, and license key
+    // Validate input fields
     if (!email || !password || !licenseKey) {
       setError('Email, password, and license key are required.');
       setIsLoading(false);
       return;
     }
 
-    // Call the Edge Function to sign up the user
-    const result = await callSignUpFunction(email, password, licenseKey);
+    // Sign up the user using Supabase Auth
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if the user needs to confirm their email
+    if (!data.session) {
+      // Email confirmation is required
+      setMessage(
+        'Sign-up successful! Please check your email to confirm your account before logging in.'
+      );
+      setIsLoading(false);
+      return;
+    }
+
+    // After successful sign-up and if email confirmation is not required, process the license key
+    const result = await callLicenseFunction(licenseKey);
 
     if (result.error) {
       setError(result.error);
@@ -103,15 +103,14 @@ const SignUp: React.FC = () => {
       return;
     }
 
-    // Prompt the user to confirm their email
-    setMessage(
-      'Sign-up successful! Please check your email to confirm your account before logging in. Once confirmed, you can ',
-    );
-
+    setMessage('Sign-up successful! You can now log in.');
     setIsLoading(false);
 
-    // Optionally, navigate to the login page after a delay
-    // setTimeout(() => navigate('/login'), 5000);
+    // Optionally, log the user out if you want them to log in again
+    await supabase.auth.signOut();
+
+    // Optionally, navigate to the login page
+    // navigate('/login');
   };
 
   return (
@@ -125,7 +124,7 @@ const SignUp: React.FC = () => {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             required
-            disabled={!!message || isLoading} // Disable input if sign-up is successful or loading
+            disabled={!!message || isLoading}
           />
           <input
             type="password"
@@ -134,7 +133,7 @@ const SignUp: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
             required
-            disabled={!!message || isLoading} // Disable input if sign-up is successful or loading
+            disabled={!!message || isLoading}
           />
           <input
             type="text"
@@ -155,9 +154,9 @@ const SignUp: React.FC = () => {
           {error && <p className="error-message">{error}</p>}
           {message && (
             <p className="success-message">
-              {message}
+              {message}{' '}
               <Link to="/login" className="link">
-                log in here
+                Log in here
               </Link>
               .
             </p>

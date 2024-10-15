@@ -1,36 +1,27 @@
 {
-  "name": "electron-react-boilerplate",
-  "description": "A foundation for scalable desktop apps",
+  "name": "poleshift",
+  "description": "Research application",
   "keywords": [
-    "electron",
-    "boilerplate",
-    "react",
-    "typescript",
-    "ts",
-    "sass",
-    "webpack",
-    "hot",
-    "reload"
+    "research"
   ],
-  "homepage": "https://github.com/electron-react-boilerplate/electron-react-boilerplate#readme",
+  "homepage": "https://icarai.io",
   "bugs": {
-    "url": "https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues"
+    "url": "https://icarai.io/contact"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/electron-react-boilerplate/electron-react-boilerplate.git"
+    "url": "git+https://github.com/nikothomas/poleshift.git"
   },
-  "license": "MIT",
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "electronreactboilerplate@gmail.com",
-    "url": "https://electron-react-boilerplate.js.org"
+    "name": "IcarAI",
+    "email": "research@icarai.io",
+    "url": "https://icarai.com"
   },
   "contributors": [
     {
-      "name": "Amila Welihinda",
-      "email": "amilajack@gmail.com",
-      "url": "https://github.com/amilajack"
+      "name": "Nikolas Yanek-Chrones",
+      "email": "nyanekch@ucsd.edu",
+      "url": "https://github.com/nikothomas"
     }
   ],
   "main": "./.erb/dll/main.bundle.dev.js",
@@ -116,6 +107,7 @@
     "electron-updater": "^6.1.4",
     "fs": "^0.0.1-security",
     "jsdom": "^25.0.0",
+    "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",
     "mammoth": "^1.8.0",
     "mathjs": "^13.1.1",
@@ -197,8 +189,8 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "Poleshift",
+    "appId": "io.icarai.poleshift",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
@@ -207,8 +199,11 @@
       "package.json"
     ],
     "mac": {
+      "identity": "IcarAI LLC (HZ64UH7RCV)",
       "sign": ".erb/scripts/notarize.js",
-      "notarize": false,
+      "notarize": {
+        "teamId": "HZ64UH7RCV"
+      },
       "target": {
         "target": "default",
         "arch": [
@@ -262,12 +257,9 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "electron-react-boilerplate",
-      "repo": "electron-react-boilerplate"
+      "owner": "nikothomas",
+      "repo": "poleshift"
     }
-  },
-  "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
   "devEngines": {
     "node": ">=14.x",

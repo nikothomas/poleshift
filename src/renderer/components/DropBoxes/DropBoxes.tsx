@@ -58,18 +58,18 @@ interface DropBoxProps {
 }
 
 const DropBox: React.FC<DropBoxProps> = ({
-                                           configItem,
-                                           isProcessing,
-                                           hasData,
-                                           isLocked,
-                                           openModal,
-                                           setProcessingState,
-                                           sampleName,
-                                           onDataProcessed,
-                                           onError,
-                                           uploadedDataItem,
-                                           openDataModal,
-                                         }) => {
+  configItem,
+  isProcessing,
+  hasData,
+  isLocked,
+  openModal,
+  setProcessingState,
+  sampleName,
+  onDataProcessed,
+  onError,
+  uploadedDataItem,
+  openDataModal,
+}) => {
   const onDrop = async (acceptedFiles: File[]) => {
     setProcessingState((prev) => ({
       ...prev,
@@ -242,11 +242,11 @@ const DropBox: React.FC<DropBoxProps> = ({
 };
 
 const DropBoxes: React.FC<DropBoxesProps> = ({
-                                               onDataProcessed,
-                                               sampleName,
-                                               onError,
-                                               uploadedData,
-                                             }) => {
+  onDataProcessed,
+  sampleName,
+  onError,
+  uploadedData,
+}) => {
   const { subscriptionLevel } = useAuth(); // Use the custom hook here
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,

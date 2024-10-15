@@ -23,9 +23,10 @@ const MainApp: React.FC = () => {
   // Data hooks
   const {
     fileTreeData,
-    sampleData,
+    samplingEventData, // Renamed from sampleData
     setFileTreeData,
-    setSampleData,
+    setSamplingEventData, // Renamed from setSampleData
+    deleteItem, // Retrieved from useData
   } = useData();
 
   // UI hooks
@@ -49,75 +50,57 @@ const MainApp: React.FC = () => {
    */
   const handleDataProcessed = useCallback(
     (data: any, configItem: any) => {
-      if (selectedItem?.type === 'sample') {
-        const sampleId = selectedItem.id;
-        const existingSample = sampleData[sampleId] || {
-          id: sampleId,
+      if (selectedItem?.type === 'samplingEvent') { // Updated from 'sample'
+        const samplingEventId = selectedItem.id; // Renamed from sampleId
+        const existingSamplingEvent = samplingEventData[samplingEventId] || { // Updated variable
+          id: samplingEventId,
           name: selectedItem.data.name,
           data: {},
           reports: [],
         };
-        const newSampleData = {
-          ...sampleData,
-          [sampleId]: {
-            ...existingSample,
+        const newSamplingEventData = { // Renamed from newSampleData
+          ...samplingEventData,
+          [samplingEventId]: {
+            ...existingSamplingEvent,
             data: {
-              ...existingSample.data,
+              ...existingSamplingEvent.data,
               [configItem.id]: data,
             },
           },
         };
-        setSampleData(newSampleData);
+        setSamplingEventData(newSamplingEventData); // Updated function
         setLocalErrorMessage('');
       } else {
-        console.error('No sample selected or selected item is not a sample.');
-        setLocalErrorMessage('Please select a sample before uploading data.');
+        console.error('No sampling event selected or selected item is not a sampling event.'); // Updated message
+        setLocalErrorMessage('Please select a sampling event before uploading data.'); // Updated message
       }
     },
-    [selectedItem, sampleData, setSampleData],
+    [selectedItem, samplingEventData, setSamplingEventData],
   );
 
   /**
-   * Function to delete an item from the tree and sample data
+   * Function to delete an item from the tree and sampling event data
+   * Utilizes the deleteItem function from DataContext to handle deletion
    * @param itemId - The ID of the item to delete
    */
-  const deleteItem = (itemId: string) => {
-    // Remove item from hierarchical tree data
-    const removeItem = (items: any[], idToRemove: string): any[] => {
-      return items
-        .filter((item) => item.id !== idToRemove)
-        .map((item) => {
-          if (item.children) {
-            return { ...item, children: removeItem(item.children, idToRemove) };
-          }
-          return item;
-        });
-    };
-
-    const updatedTreeData = removeItem(fileTreeData, itemId);
-    setFileTreeData(updatedTreeData);
-
-    // Also remove from sampleData if necessary
-    const descendantIds = getDescendantIds(fileTreeData, itemId);
-    const idsToRemove = [itemId, ...descendantIds];
-
-    const newSampleData = { ...sampleData };
-    idsToRemove.forEach((id) => {
-      if (newSampleData[id]) {
-        delete newSampleData[id];
+  const handleDeleteItem = useCallback(
+    async (itemId: string) => {
+      try {
+        await deleteItem(itemId); // Delete from database and frontend
+        // Optionally, display a success message to the user
+        alert('Sampling event deleted successfully.');
+      } catch (error: any) {
+        console.error('Error deleting item:', error);
+        setLocalErrorMessage(error.message || 'Failed to delete the item.');
       }
-    });
-    setSampleData(newSampleData);
-
-    if (selectedItem && idsToRemove.includes(selectedItem.id)) {
-      setSelectedItem(null);
-    }
-  };
+    },
+    [deleteItem],
+  );
 
   // Determine the item name to display in the header
   let itemName = 'Welcome';
   if (selectedItem) {
-    if (selectedItem.type === 'sample') {
+    if (selectedItem.type === 'samplingEvent') { // Updated from 'sample'
       const { name } = selectedItem.data;
       itemName = name;
     } else {
@@ -125,10 +108,10 @@ const MainApp: React.FC = () => {
     }
   }
 
-  const sampleId =
-    selectedItem && selectedItem.type === 'sample' ? selectedItem.id : null;
-  const sample = sampleId ? sampleData[sampleId] : null;
-  const uploadedData = sample?.data || {};
+  const samplingEventId =
+    selectedItem && selectedItem.type === 'samplingEvent' ? selectedItem.id : null; // Updated from 'sample'
+  const samplingEvent = samplingEventId ? samplingEventData[samplingEventId] : null; // Renamed from sample
+  const uploadedData = samplingEvent?.data || {}; // Renamed from sample?.data
 
   return (
     <div id="app">
@@ -144,21 +127,21 @@ const MainApp: React.FC = () => {
             <h2 id="item-name">{itemName}</h2>
           </div>
           <div className="content-body">
-            {sampleId ? (
+            {samplingEventId ? ( // Updated condition
               <>
                 {localErrorMessage && (
                   <div className="error-message">{localErrorMessage}</div>
                 )}
                 <DropBoxes
                   onDataProcessed={handleDataProcessed}
-                  sampleName={itemName}
+                  samplingEventName={itemName} // Updated prop
                   onError={setLocalErrorMessage}
                   uploadedData={uploadedData}
                 />
               </>
             ) : (
               <p className="content-body__text">
-                Select a sample from the sidebar to view details.
+                Select a sampling event from the sidebar to view details. {/* Updated message */}
               </p>
             )}
           </div>
@@ -176,7 +159,7 @@ const MainApp: React.FC = () => {
         <ContextMenu
           contextMenuState={contextMenuState}
           setContextMenuState={setContextMenuState}
-          deleteItem={deleteItem}
+          deleteItem={handleDeleteItem} // Use handleDeleteItem
           userTier={userTier}
         />
 

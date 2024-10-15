@@ -5,7 +5,7 @@ import supabase from './supabaseClient';
 import { sampleLocations } from '../config/sampleLocationsConfig';
 
 // Define possible item types
-export type ItemType = 'sample' | 'folder';
+export type ItemType = 'samplingEvent' | 'folder';
 
 // Extend TreeItem
 export interface ExtendedTreeItem {
@@ -21,7 +21,7 @@ export interface ExtendedTreeItem {
 interface ProcessFunctions {
   [key: string]: (
     inputs: Record<string, string>,
-    sampleData: Record<string, any>,
+    samplingEventData: Record<string, any>,
     userOrgId: string | null,
     userOrgShortId: string | null,
   ) => Promise<ExtendedTreeItem>;
@@ -41,14 +41,14 @@ function formatLocalDate(date: Date): string {
 }
 
 /**
- * Creates a new sample, including:
- * - Generating a unique sample name.
+ * Creates a new sampling event, including:
+ * - Generating a unique sampling event name.
  * - Creating folders in Supabase Storage by uploading 'index_file.poleshift'.
  * - Inserting a new record into the sampling_event_metadata table.
  */
-export const processCreateSample = async (
+export const processCreateSamplingEvent = async (
   inputs: Record<string, string>,
-  sampleData: Record<string, any>,
+  samplingEventData: Record<string, any>,
   userOrgId: string | null,
   userOrgShortId: string | null,
 ): Promise<ExtendedTreeItem> => {
@@ -58,7 +58,9 @@ export const processCreateSample = async (
 
   // Input validation
   if (!collectionDate || !locCharId) {
-    throw new Error('Collection date and location are required to create a sample.');
+    throw new Error(
+      'Collection date and location are required to create a sampling event.',
+    );
   }
 
   if (!orgId || !orgShortId) {
@@ -84,17 +86,19 @@ export const processCreateSample = async (
   const formattedDate = new Date(collectionDate).toISOString().split('T')[0];
   const baseName = `${formattedDate}-${locCharId}`;
 
-  // Find existing samples with the same date, location char_id, and org
-  const existingSamples = Object.values(sampleData).filter((sample) => {
-    const regex = new RegExp(`^${baseName}-(\\d{2})-${orgShortId}$`);
-    return regex.test(sample.name);
-  });
+  // Find existing sampling events with the same date, location char_id, and org
+  const existingSamplingEvents = Object.values(samplingEventData).filter(
+    (samplingEvent) => {
+      const regex = new RegExp(`^${baseName}-(\\d{2})-${orgShortId}$`);
+      return regex.test(samplingEvent.name);
+    },
+  );
 
   // Extract existing numbers
-  const existingNumbers = existingSamples
-    .map((sample) => {
+  const existingNumbers = existingSamplingEvents
+    .map((samplingEvent) => {
       const regex = new RegExp(`^${baseName}-(\\d{2})-${orgShortId}$`);
-      const match = sample.name.match(regex);
+      const match = samplingEvent.name.match(regex);
       return match ? parseInt(match[1], 10) : null;
     })
     .filter((num): num is number => num !== null);
@@ -106,10 +110,10 @@ export const processCreateSample = async (
   }
   const formattedNumber = String(nextNumber).padStart(2, '0');
 
-  // Construct the sample name
-  const sampleName = `${baseName}-${formattedNumber}-${orgShortId}`;
+  // Construct the sampling event name
+  const samplingEventName = `${baseName}-${formattedNumber}-${orgShortId}`;
 
-  const newId = uuidv4(); // Generate a UUID for the sample
+  const newId = uuidv4(); // Generate a UUID for the sampling event
 
   // Use sampleLocationsConfig to look up lat and long
   const location = sampleLocations.find((loc) => loc.char_id === locCharId);
@@ -122,8 +126,8 @@ export const processCreateSample = async (
   const { long } = location;
 
   // Create folder paths in Supabase Storage
-  const rawDataFolderPath = `${orgShortId}/${sampleName}/`;
-  const processedDataFolderPath = `${orgShortId}/${sampleName}/`;
+  const rawDataFolderPath = `${orgShortId}/${samplingEventName}/`;
+  const processedDataFolderPath = `${orgShortId}/${samplingEventName}/`;
 
   try {
     // Supabase Storage handles folder creation implicitly via object paths.
@@ -200,7 +204,7 @@ export const processCreateSample = async (
         created_at: new Date().toISOString(), // timestamptz (UTC)
         org_id: orgId, // uuid
         user_id: userId, // uuid
-        sample_id: sampleName, // text
+        sample_id: samplingEventName, // text
         lat, // double precision
         long, // double precision
         date: formattedDate, // date
@@ -215,17 +219,17 @@ export const processCreateSample = async (
       );
     }
   } catch (error: any) {
-    console.error('Error in processCreateSample:', error);
-    throw new Error(`Failed to create sample: ${error.message}`);
+    console.error('Error in processCreateSamplingEvent:', error);
+    throw new Error(`Failed to create sampling event: ${error.message}`);
   }
 
   return {
     id: newId,
-    text: sampleName,
+    text: samplingEventName,
     droppable: false,
-    type: 'sample',
+    type: 'samplingEvent',
     data: {
-      name: sampleName,
+      name: samplingEventName,
       collectionDate,
       locCharId,
       orgId,
@@ -235,19 +239,17 @@ export const processCreateSample = async (
   };
 };
 
-// src/renderer/utils/sidebarFunctions.ts
-
 /**
  * Creates a new folder.
  * @param inputs Input parameters containing the folder name.
- * @param sampleData Existing sample data.
+ * @param samplingEventData Existing sampling event data.
  * @param userOrgId User's organization ID.
  * @param userOrgShortId User's organization short ID.
  * @returns An ExtendedTreeItem representing the new folder.
  */
 export const processCreateFolder = async (
   inputs: Record<string, string>,
-  sampleData: Record<string, any>,
+  samplingEventData: Record<string, any>,
   userOrgId: string | null,
   userOrgShortId: string | null,
 ): Promise<ExtendedTreeItem> => {
@@ -270,7 +272,7 @@ export const processCreateFolder = async (
 
 // Export all processing functions
 export const processFunctions: ProcessFunctions = {
-  sample: processCreateSample, // Changed key to 'sample'
+  samplingEvent: processCreateSamplingEvent, // Changed key to 'samplingEvent'
   folder: processCreateFolder, // Changed key to 'folder'
   // Add more processing functions here
 };

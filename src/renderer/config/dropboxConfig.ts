@@ -1,4 +1,6 @@
 // src/renderer/config/dropboxConfig.ts
+import { ModalField } from '../../common/types/dropboxTypes';
+
 export interface DropboxConfigItem {
   id: number; // Unique identifier
   label: string;
@@ -9,12 +11,9 @@ export interface DropboxConfigItem {
   processFunctionName: string; // Optional, as it might not be present
   requiredSubscriptionLevel?: number;
   modalFields: ModalField[]; // Defines fields in the modal
-}
-
-import { ModalField } from "../../common/types/dropboxTypes"; // Import the interface
+} // Import the interface
 
 const dropboxConfig: DropboxConfigItem[] = [
-
   // Add Custom Input modal
   {
     id: 1,

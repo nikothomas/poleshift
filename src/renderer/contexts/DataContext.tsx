@@ -9,31 +9,34 @@ import React, {
   useContext,
 } from 'react';
 import debounce from 'lodash/debounce';
+import { v4 as uuidv4 } from 'uuid'; // Ensure uuid is installed and imported
 import { ExtendedTreeItem, processFunctions } from '../utils/sidebarFunctions';
 import { AuthContext } from './AuthContext';
+import supabase from '../utils/supabaseClient'; // Ensure correct path
 
-export interface Sample {
+export interface SamplingEvent {
   id: string;
   name: string;
   data: { [key: string]: any };
 }
 
-interface SampleData {
-  [id: string]: Sample;
+interface SamplingEventData {
+  [id: string]: SamplingEvent;
 }
 
 interface AppData {
   fileTreeData: ExtendedTreeItem[];
-  sampleData: SampleData;
+  samplingEventData: SamplingEventData;
 }
 
 export interface DataContextType extends AppData {
   setFileTreeData: (data: ExtendedTreeItem[]) => void;
-  setSampleData: (newData: SampleData) => void;
+  setSamplingEventData: (newData: SamplingEventData) => void;
   addItem: (
     type: keyof typeof processFunctions,
     inputs: Record<string, string>,
   ) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>; // Added deleteItem
 }
 
 export const DataContext = createContext<DataContextType | undefined>(
@@ -54,7 +57,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const { user, userOrgId, userOrgShortId, loading: authLoading } = authContext;
 
   const [fileTreeData, setFileTreeData] = useState<ExtendedTreeItem[]>([]);
-  const [sampleData, setSampleData] = useState<SampleData>({});
+  const [samplingEventData, setSamplingEventData] = useState<SamplingEventData>(
+    {},
+  );
 
   const getUserKey = (baseKey: string) => {
     return user ? `${baseKey}_${user.id}` : baseKey;
@@ -66,7 +71,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const loadData = useCallback(async () => {
     if (!user) {
       setFileTreeData([]);
-      setSampleData({});
+      setSamplingEventData({});
       return;
     }
 
@@ -101,20 +106,25 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         }
       }
 
-      // Retrieve and decrypt sampleData
-      const sampleDataResult = await window.electron.retrieveAndDecrypt(
+      // Retrieve and decrypt samplingEventData
+      const samplingEventDataResult = await window.electron.retrieveAndDecrypt(
         user.id,
-        getUserKey('sampleData'),
+        getUserKey('samplingEventData'),
       );
-      if (sampleDataResult.success) {
-        const parsedSampleData = JSON.parse(sampleDataResult.value); // Parse the decrypted JSON string
-        if (parsedSampleData && typeof parsedSampleData === 'object') {
-          setSampleData(parsedSampleData);
+      if (samplingEventDataResult.success) {
+        const parsedSamplingEventData = JSON.parse(
+          samplingEventDataResult.value,
+        ); // Parse the decrypted JSON string
+        if (
+          parsedSamplingEventData &&
+          typeof parsedSamplingEventData === 'object'
+        ) {
+          setSamplingEventData(parsedSamplingEventData);
         } else {
           console.warn(
-            'sampleData is not an object. Initializing with default values.',
+            'samplingEventData is not an object. Initializing with default values.',
           );
-          setSampleData({});
+          setSamplingEventData({});
         }
       }
     } catch (error) {
@@ -143,21 +153,21 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         );
       }
 
-      const setSampleDataResult = await window.electron.encryptAndStore(
+      const setSamplingEventDataResult = await window.electron.encryptAndStore(
         user.id,
-        getUserKey('sampleData'),
-        JSON.stringify(sampleData), // Stringify the data before encryption
+        getUserKey('samplingEventData'),
+        JSON.stringify(samplingEventData), // Stringify the data before encryption
       );
-      if (!setSampleDataResult.success) {
+      if (!setSamplingEventDataResult.success) {
         console.error(
-          'Failed to save sampleData:',
-          setSampleDataResult.message,
+          'Failed to save samplingEventData:',
+          setSamplingEventDataResult.message,
         );
       }
     } catch (error) {
       console.error('Error saving data:', error);
     }
-  }, [fileTreeData, getUserKey, sampleData, user]);
+  }, [fileTreeData, getUserKey, samplingEventData, user]);
 
   // Debounce the saveData function to prevent excessive writes
   const debouncedSaveData = useCallback(
@@ -180,15 +190,18 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     return () => {
       debouncedSaveData.cancel();
     };
-  }, [fileTreeData, sampleData, debouncedSaveData, authLoading, user]);
+  }, [fileTreeData, samplingEventData, debouncedSaveData, authLoading, user]);
 
   useEffect(() => {
     if (!user && !authLoading) {
       setFileTreeData([]);
-      setSampleData({});
+      setSamplingEventData({});
     }
   }, [user, authLoading]);
 
+  /**
+   * Function to add a new item (samplingEvent or folder)
+   */
   const addItem = useCallback(
     async (
       type: keyof typeof processFunctions,
@@ -209,7 +222,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         // Call the processing function with required parameters
         const newItem: ExtendedTreeItem = await processingFunction(
           inputs,
-          sampleData,
+          samplingEventData,
           userOrgId,
           userOrgShortId,
         );
@@ -221,16 +234,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
         setFileTreeData((prevFileTreeData) => [...prevFileTreeData, newItem]);
 
-        if (newItem.type === 'sample') {
-          const newSample: Sample = {
+        if (newItem.type === 'samplingEvent') {
+          const newSamplingEvent: SamplingEvent = {
             id: newItem.id,
             name: newItem.text,
             data: newItem.data || {},
           };
 
-          setSampleData((prevSampleData) => ({
-            ...prevSampleData,
-            [newSample.id]: newSample,
+          setSamplingEventData((prevSamplingEventData) => ({
+            ...prevSamplingEventData,
+            [newSamplingEvent.id]: newSamplingEvent,
           }));
         }
 
@@ -240,17 +253,76 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         throw error;
       }
     },
-    [sampleData, setFileTreeData, setSampleData, userOrgId, userOrgShortId],
+    [
+      samplingEventData,
+      setFileTreeData,
+      setSamplingEventData,
+      userOrgId,
+      userOrgShortId,
+    ],
   );
+
+  /**
+   * Function to delete an item from the tree, samplingEventData, and the database
+   * @param id - The ID of the item to delete
+   */
+  const deleteItem = useCallback(
+    async (id: string) => {
+      try {
+        console.log(`Attempting to delete sampling event with ID: ${id}`);
+
+        // **Step 1: Delete from Supabase**
+        const { data, error } = await supabase
+          .from('sampling_event_metadata') // Replace with your actual table name
+          .delete()
+          .eq('id', id); // Replace 'id' with your actual primary key column if different
+
+        if (error) {
+          console.error(`Supabase deletion error for ID ${id}:`, error);
+          throw new Error(`Failed to delete sampling event: ${error.message}`);
+        }
+
+        console.log(`Successfully deleted sampling event with ID: ${id} from Supabase`);
+
+        // **Step 2: Remove item from hierarchical tree data**
+        const removeItem = (items: ExtendedTreeItem[], idToRemove: string): ExtendedTreeItem[] => {
+          return items
+            .filter((item) => item.id !== idToRemove)
+            .map((item) => ({
+              ...item,
+              children: item.children ? removeItem(item.children, idToRemove) : undefined,
+            }));
+        };
+        setFileTreeData((prevFileTreeData) => removeItem(prevFileTreeData, id));
+
+        console.log(`Removed sampling event with ID: ${id} from frontend tree data`);
+
+        // **Step 3: Remove from samplingEventData**
+        setSamplingEventData((prevSamplingEventData) => {
+          const newSamplingEventData = { ...prevSamplingEventData };
+          delete newSamplingEventData[id];
+          return newSamplingEventData;
+        });
+
+        console.log(`Removed sampling event with ID: ${id} from frontend state`);
+      } catch (error: any) {
+        console.error(`Error deleting sampling event with ID ${id}:`, error);
+        throw error; // To allow the caller to handle the error
+      }
+    },
+    [setFileTreeData, setSamplingEventData],
+  );
+
 
   return (
     <DataContext.Provider
       value={{
         fileTreeData,
-        sampleData,
+        samplingEventData,
         setFileTreeData,
-        setSampleData,
+        setSamplingEventData,
         addItem,
+        deleteItem, // Expose deleteItem
       }}
     >
       {children}

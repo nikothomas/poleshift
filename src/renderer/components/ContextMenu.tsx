@@ -2,13 +2,14 @@
 
 import React, { useEffect } from 'react';
 import useUI from '../hooks/useUI';
-import './ContextMenu.css'
+import './ContextMenu.css';
 
 interface ContextMenuProps {
-  deleteItem: (id: string) => void;
+  deleteItem: (id: string) => Promise<void>; // Updated to return a Promise
+  userTier: string; // Assuming you pass userTier as a prop
 }
 
-const ContextMenu: React.FC<ContextMenuProps> = ({ deleteItem }) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({ deleteItem, userTier }) => {
   const { contextMenuState, setContextMenuState } = useUI();
   const { isVisible, x, y, itemId } = contextMenuState;
 
@@ -26,9 +27,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ deleteItem }) => {
     };
   }, [isVisible, setContextMenuState]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (itemId) {
-      deleteItem(itemId);
+      try {
+        await deleteItem(itemId);
+        // Optionally, display a success message to the user
+      } catch (error: any) {
+        console.error('Error deleting item from ContextMenu:', error);
+        // Optionally, display an error message to the user
+        alert(error.message || 'Failed to delete the item.');
+      }
       setContextMenuState((prevState) => ({ ...prevState, isVisible: false }));
     }
   };
@@ -41,9 +49,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ deleteItem }) => {
       style={{ top: `${y}px`, left: `${x}px`, position: 'absolute' }}
     >
       <ul className="context-menu__list">
-        <li className="context-menu__item" onClick={handleDelete}>
-          Delete
-        </li>
+        {userTier === 'admin' && ( // Example: Only admins can delete
+          <li className="context-menu__item" onClick={handleDelete}>
+            Delete
+          </li>
+        )}
+        {/* Add more context menu items as needed */}
       </ul>
     </div>
   );

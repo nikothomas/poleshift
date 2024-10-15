@@ -33,17 +33,17 @@ const SidebarTree: React.FC<SidebarTreeProps> = ({ treeData, setTreeData }) => {
 
   // Define the Node component for rendering each node
   const Node = ({
-                  node,
-                  style,
-                  dragHandle,
-                }: {
+    node,
+    style,
+    dragHandle,
+  }: {
     node: NodeApi<TreeItem>;
     style: React.CSSProperties;
     dragHandle?: (el: HTMLDivElement | null) => void;
   }) => {
     const isSelected = selectedItem && selectedItem.id === node.data.id;
     const isFolder = node.data.type === 'folder';
-    const isSample = node.data.type === 'sample';
+    const isSamplingEvent = node.data.type === 'samplingEvent'; // Updated from 'isSample'
 
     const handleClick = (e: React.MouseEvent) => {
       node.handleClick(e);
@@ -68,7 +68,11 @@ const SidebarTree: React.FC<SidebarTreeProps> = ({ treeData, setTreeData }) => {
     const nodeClassNames = [
       'tree-node',
       isSelected ? 'tree-node--selected' : '',
-      isFolder ? 'tree-node--folder' : isSample ? 'tree-node--sample' : 'tree-node--file',
+      isFolder
+        ? 'tree-node--folder'
+        : isSamplingEvent
+          ? 'tree-node--samplingEvent'
+          : 'tree-node--file',
     ]
       .join(' ')
       .trim();
@@ -88,10 +92,10 @@ const SidebarTree: React.FC<SidebarTreeProps> = ({ treeData, setTreeData }) => {
             ) : (
               <FolderIcon />
             )
-          ) : isSample ? (
+          ) : isSamplingEvent ? ( // Updated condition
             <ScienceIcon />
           ) : (
-            <FolderIcon />
+            <FolderIcon /> // You might want to change this to a different icon if it's neither folder nor sampling event
           )}
         </div>
         <div className="tree-node__text">{node.data.text}</div>
@@ -113,7 +117,9 @@ const SidebarTree: React.FC<SidebarTreeProps> = ({ treeData, setTreeData }) => {
         }}
         selection={selectedItem ? selectedItem.id : undefined}
         disableDrag={() => false} // Enable dragging for all nodes
-        disableDrop={({ parentNode }) => parentNode?.data.type === 'sample'} // Prevent dropping onto samples
+        disableDrop={({ parentNode }) =>
+          parentNode?.data.type === 'samplingEvent'
+        } // Prevent dropping onto sampling events
         rowHeight={36} // Set row height via the Tree component
         indent={24} // Set indentation via the Tree component
         renderCursor={(props: CursorProps) => <CustomCursor {...props} />} // Use the custom cursor
