@@ -147,12 +147,22 @@ ipcMain.handle('electron-store-set', async (event, key: string, value: any) => {
 
 ipcMain.handle(
   'process-function',
-  async (event, functionName: string, studentName: string, modalInputs: any, files?: any) => {
+  async (
+    event,
+    functionName: string,
+    sampleId: string,
+    modalInputs: any,
+    files?: any,
+  ) => {
     try {
       if (!allowedFunctionNames.includes(functionName)) {
         throw new Error(`Function ${functionName} is not allowed`);
       }
-      const result = await processors[functionName](studentName, modalInputs, files);
+      const result = await processors[functionName](
+        sampleId,
+        modalInputs,
+        files,
+      );
       return { success: true, result };
     } catch (error: any) {
       console.error(`Error in ${functionName}:`, error);
@@ -160,6 +170,7 @@ ipcMain.handle(
     }
   },
 );
+
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');

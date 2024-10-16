@@ -26,17 +26,19 @@ export interface ExtendedTreeItem {
   data?: { [key: string]: any };
 }
 
-// Define the interface for location options
-interface LocationOption {
+export interface LocationOption {
   id: string; // UUID from Supabase
   char_id: string;
   label: string;
+  lat: number; // Use 'lat' instead of 'latitude'
+  long: number; // Use 'long' instead of 'longitude'
 }
 
 export interface SamplingEvent {
   id: string;
   name: string;
   loc_id: string; // Store location UUID
+  storage_folder: string; // Include storage_folder
   data: { [key: string]: any };
 }
 
@@ -81,12 +83,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // State to hold the fetched locations from the database
   const [locations, setLocations] = useState<LocationOption[]>([]);
 
-  // Fetch sample locations from Supabase when the component mounts
   useEffect(() => {
     const fetchLocations = async () => {
       const { data, error } = await supabase
         .from('sample_locations')
-        .select('id, char_id, label')
+        .select('id, char_id, label, lat, long')
         .eq('is_enabled', true);
 
       if (error) {
@@ -94,10 +95,18 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         // Handle error as needed
       } else if (data) {
         const formattedLocations = data.map(
-          (location: { id: string; char_id: string; label: string }) => ({
+          (location: {
+            id: string;
+            char_id: string;
+            label: string;
+            lat: number;
+            long: number;
+          }) => ({
             id: location.id,
             char_id: location.char_id,
             label: location.label,
+            lat: location.lat,
+            long: location.long,
           }),
         );
         setLocations(formattedLocations);
@@ -248,6 +257,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             id: event.id,
             name: event.sample_id,
             loc_id: event.loc_id,
+            storage_folder: event.storage_folder, // Include storage_folder
             data: {}, // Include other fields as necessary
           };
         });
@@ -291,6 +301,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
                 id: event.id,
                 name: event.sample_id,
                 loc_id: event.loc_id,
+                storage_folder: event.storage_folder, // Include storage_folder
                 data: {}, // Include other fields as necessary
               },
             }));
@@ -342,7 +353,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             [newItem.id]: {
               id: newItem.id,
               name: newItem.text,
-              loc_id: newItem.data.loc_id,
+              loc_id: newItem.data.locId, // Corrected property name
+              storage_folder: newItem.data.storage_folder, // Include storage_folder
               data: newItem.data || {},
             },
           }));
@@ -531,9 +543,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       // Upload placeholder file to raw-data bucket
       const { error: rawError } = await supabase.storage
         .from('raw-data')
-        .upload(`${rawDataFolderPath}index_file.poleshift`, placeholderContent, {
-          upsert: false,
-        });
+        .upload(
+          `${rawDataFolderPath}index_file.poleshift`,
+          placeholderContent,
+          {
+            upsert: false,
+          },
+        );
 
       if (rawError) {
         if (
@@ -600,7 +616,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           sample_id: samplingEventName, // text
           date: formattedDate, // date
           collected_datetime_local: formattedLocalDate, // Stored as local datetime string
-          storage_folder: rawDataFolderPath, // text
+          storage_folder: rawDataFolderPath, // Include storage_folder
           collected_datetime_utc: utcDateISOString, // timestamptz (UTC)
           loc_id: locId, // uuid of the location
         });
@@ -625,7 +641,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         collectionDate,
         locCharId,
         orgId,
-        locId,
+        locId, // Ensure locId is correctly set
+        storage_folder: rawDataFolderPath, // Include storage_folder
       },
     };
   };

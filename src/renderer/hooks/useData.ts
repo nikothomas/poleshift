@@ -1,4 +1,4 @@
-// src/renderer/hooks/useData.ts
+// src/hooks/useData.ts
 
 import { useContext } from 'react';
 import { DataContext, DataContextType } from '../contexts/DataContext';

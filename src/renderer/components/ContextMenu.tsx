@@ -10,7 +10,12 @@ interface ContextMenuProps {
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ deleteItem, userTier }) => {
-  const { contextMenuState, setContextMenuState } = useUI();
+  const {
+    contextMenuState,
+    setContextMenuState,
+    selectedLeftItem,
+    setSelectedLeftItem,
+  } = useUI();
   const { isVisible, x, y, itemId } = contextMenuState;
 
   useEffect(() => {
@@ -31,7 +36,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ deleteItem, userTier }) => {
     if (itemId) {
       try {
         await deleteItem(itemId);
-        // Optionally, display a success message to the user
+
+        // If the deleted item is the currently selected left item, clear it
+        if (selectedLeftItem && selectedLeftItem.id === itemId) {
+          setSelectedLeftItem(null);
+        }
       } catch (error: any) {
         console.error('Error deleting item from ContextMenu:', error);
         // Optionally, display an error message to the user
@@ -49,7 +58,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ deleteItem, userTier }) => {
       style={{ top: `${y}px`, left: `${x}px`, position: 'absolute' }}
     >
       <ul className="context-menu__list">
-        {userTier === 'admin' && ( // Example: Only admins can delete
+        {userTier === 'admin' && (
           <li className="context-menu__item" onClick={handleDelete}>
             Delete
           </li>

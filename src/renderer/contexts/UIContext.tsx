@@ -2,7 +2,6 @@
 
 import React, {
   createContext,
-  useContext,
   useState,
   ReactNode,
   useMemo,
@@ -44,10 +43,14 @@ interface ContextMenuProps {
 }
 
 export interface UIContextType {
-  selectedItem: any; // Adjust type based on your implementation
-  setSelectedItem: React.Dispatch<React.SetStateAction<any>>;
+  selectedLeftItem: any; // Left sidebar (sampling event)
+  setSelectedLeftItem: React.Dispatch<React.SetStateAction<any>>;
+  selectedRightItem: any; // Right sidebar (location)
+  setSelectedRightItem: React.Dispatch<React.SetStateAction<any>>;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  isRightSidebarCollapsed: boolean;
+  toggleRightSidebar: () => void;
   modalState: ModalState;
   openModal: (title: string, fields: Field[], callback?: () => void) => void;
   closeModal: () => void;
@@ -68,8 +71,12 @@ interface UIProviderProps {
 }
 
 export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
-  const [selectedItem, setSelectedItem] = useState<any>(null); // Adjust type as needed
+  const [selectedLeftItem, setSelectedLeftItem] = useState<any>(null); // For left sidebar (sampling events)
+  const [selectedRightItem, setSelectedRightItem] = useState<any>(null); // For right sidebar (locations)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState<boolean>(
+    false,
+  ); // New state
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     title: '',
@@ -96,6 +103,10 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
     setIsSidebarCollapsed((prev) => !prev);
   }, []);
 
+  const toggleRightSidebar = useCallback(() => {
+    setIsRightSidebarCollapsed((prev) => !prev);
+  }, []);
+
   const openModal = useCallback(
     (title: string, fields: Field[], callback?: () => void) => {
       setModalState({
@@ -120,10 +131,14 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
   // Memoize the context value
   const value = useMemo(
     () => ({
-      selectedItem,
-      setSelectedItem,
+      selectedLeftItem,
+      setSelectedLeftItem,
+      selectedRightItem,
+      setSelectedRightItem,
       isSidebarCollapsed,
       toggleSidebar,
+      isRightSidebarCollapsed,
+      toggleRightSidebar,
       modalState,
       openModal,
       closeModal,
@@ -137,10 +152,14 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
       setErrorMessage,
     }),
     [
-      selectedItem,
-      setSelectedItem,
+      selectedLeftItem,
+      setSelectedLeftItem,
+      selectedRightItem,
+      setSelectedRightItem,
       isSidebarCollapsed,
       toggleSidebar,
+      isRightSidebarCollapsed,
+      toggleRightSidebar,
       modalState,
       openModal,
       closeModal,
@@ -157,13 +176,3 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 };
-
-export const useUI = (): UIContextType => {
-  const context = useContext(UIContext);
-  if (!context) {
-    throw new Error('useUI must be used within a UIProvider');
-  }
-  return context;
-};
-
-export default useUI;

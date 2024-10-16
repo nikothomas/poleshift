@@ -1,0 +1,78 @@
+/* src/components/Sidebar/CustomCursor.css */
+
+.custom-cursor {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  pointer-events: none; /* Ensure the cursor doesn't block interactions */
+  width: calc(100% - var(--indent, 24px)); /* Adjust width based on indentation */
+  height: 100%;
+  box-sizing: border-box;
+  transform: translateY(-50%); /* Center vertically */
+}
+
+.custom-cursor__line {
+  flex: 1;
+  height: 4px; /* Thickness of the drop line */
+  background-color: var(--color-primary, #6200ee);
+  transition: background-color 0.3s, height 0.3s;
+}
+
+.custom-cursor__circle {
+  background-color: var(--color-primary, #6200ee);
+  transition: background-color 0.3s;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .custom-cursor__circle {
+    width: 6px;
+    height: 6px;
+    margin-right: 6px;
+  }
+
+  .custom-cursor__line {
+    height: 1px;
+  }
+}
+
+/* Animations (Optional) */
+.custom-cursor__line {
+  animation: pulse 1s infinite;
+}
+
+.custom-cursor__circle {
+  animation: bounce 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Respect user's reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .custom-cursor__line {
+    animation: none;
+  }
+
+  .custom-cursor__circle {
+    animation: none;
+  }
+}

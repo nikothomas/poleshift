@@ -12,11 +12,11 @@ function App() {
   return (
     <AuthProvider>
       <DataProvider>
-          <UIProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
-          </UIProvider>
+        <UIProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </UIProvider>
       </DataProvider>
     </AuthProvider>
   );

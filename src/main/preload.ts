@@ -1,7 +1,6 @@
 // src/main/preload.ts
 
 import { contextBridge, ipcRenderer } from 'electron';
-import { ProcessedTestData } from '../common/types/testDataTypes';
 
 // Define the channels for electron-store
 const storeChannels = {
@@ -48,7 +47,7 @@ contextBridge.exposeInMainWorld('electron', {
   ) => {
     return ipcRenderer.invoke('process-function', functionName, studentName, modalInputs, files);
   },
-  
+
   saveFile: async (fileBuffer: ArrayBuffer, fileName: string) => {
     return ipcRenderer.invoke('save-file', fileBuffer, fileName);
   },

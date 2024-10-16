@@ -1,8 +1,7 @@
 // src/renderer/components/MainApp.tsx
 
-import React, { useState, useCallback } from 'react';
-import Sidebar from './Sidebar/Sidebar';
-import DropBoxes from './DropBoxes/DropBoxes';
+import React, { useState, useCallback, useEffect } from 'react';
+import LeftSidebar from './LeftSidebar/LeftSidebar';
 import ConfirmDialog from './ConfirmDialog';
 import ContextMenu from './ContextMenu';
 import ErrorBoundary from './ErrorBoundary';
@@ -10,6 +9,10 @@ import useAuth from '../hooks/useAuth';
 import useData from '../hooks/useData';
 import useUI from '../hooks/useUI';
 import AccountActions from './Account/AccountActions';
+import GlobeComponent from './GlobeComponent';
+import RightSidebar from './RightSidebar';
+import DropBoxes from './DropBoxes/DropBoxes';
+import ErrorMessage from './ErrorMessage'; // Corrected import path
 
 const MainApp: React.FC = () => {
   // Authentication hooks
@@ -21,20 +24,16 @@ const MainApp: React.FC = () => {
 
   // Data hooks
   const {
-    fileTreeData,
     samplingEventData,
-    setFileTreeData,
     setSamplingEventData,
-    addItem,
-    deleteItem, // Retrieved from useData
+    deleteItem,
   } = useData();
 
   // UI hooks
   const {
-    selectedItem,
-    setSelectedItem,
+    selectedLeftItem,
+    setSelectedLeftItem,
     contextMenuState,
-    setContextMenuState,
     confirmState,
     setConfirmState,
     showAccountActions,
@@ -50,11 +49,11 @@ const MainApp: React.FC = () => {
    */
   const handleDataProcessed = useCallback(
     (data: any, configItem: any) => {
-      if (selectedItem?.type === 'samplingEvent') {
-        const samplingEventId = selectedItem.id;
+      if (selectedLeftItem?.type === 'samplingEvent') {
+        const samplingEventId = selectedLeftItem.id;
         const existingSamplingEvent = samplingEventData[samplingEventId] || {
           id: samplingEventId,
-          name: selectedItem.text,
+          name: selectedLeftItem.text,
           data: {},
         };
 
@@ -80,7 +79,7 @@ const MainApp: React.FC = () => {
         );
       }
     },
-    [selectedItem, samplingEventData, setSamplingEventData],
+    [selectedLeftItem, samplingEventData, setSamplingEventData],
   );
 
   /**
@@ -92,68 +91,106 @@ const MainApp: React.FC = () => {
     async (itemId: string) => {
       try {
         await deleteItem(itemId); // Delete from database and frontend
+        // If the deleted item is the currently selected left item, clear it
+        if (selectedLeftItem && selectedLeftItem.id === itemId) {
+          setSelectedLeftItem(null);
+        }
         setLocalErrorMessage('');
       } catch (error: any) {
         console.error('Error deleting item:', error);
         setLocalErrorMessage(error.message || 'Failed to delete the item.');
       }
     },
-    [deleteItem],
+    [deleteItem, selectedLeftItem, setSelectedLeftItem],
   );
 
-  // Determine the item name to display in the header
-  let itemName = 'Welcome';
-  if (selectedItem) {
-    if (selectedItem.type === 'samplingEvent') {
-      const { text } = selectedItem;
-      itemName = text;
-    } else {
-      itemName = selectedItem.text;
-    }
+  let itemName = null;
+  if (selectedLeftItem) {
+    itemName = selectedLeftItem.text;
   }
 
   const samplingEventId =
-    selectedItem && selectedItem.type === 'samplingEvent'
-      ? selectedItem.id
+    selectedLeftItem && selectedLeftItem.type === 'samplingEvent'
+      ? selectedLeftItem.id
       : null;
   const samplingEvent = samplingEventId
     ? samplingEventData[samplingEventId]
     : null;
   const uploadedData = samplingEvent?.data || {};
 
+  // Function to determine which error message to display
+  const getDisplayedErrorMessage = () => {
+    if (errorMessage) {
+      return {
+        message: errorMessage,
+        onClose: () => setGlobalErrorMessage(''),
+        className: 'error-message', // Use a common class
+      };
+    } else if (localErrorMessage) {
+      return {
+        message: localErrorMessage,
+        onClose: () => setLocalErrorMessage(''),
+        className: 'error-message', // Use a common class
+      };
+    } else {
+      return null;
+    }
+  };
+
+  const displayedError = getDisplayedErrorMessage();
+
+  // Auto-hide the displayed error message after 5 seconds
+  useEffect(() => {
+    if (displayedError) {
+      const timer = setTimeout(() => {
+        displayedError.onClose();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [displayedError]);
+
   return (
     <div id="app">
       <ErrorBoundary>
-        {/* Sidebar Component */}
-        <Sidebar userTier={userTier} />
+        {/* App Container */}
+        <div className="app-container">
+          {/* Left Sidebar Component */}
+          <LeftSidebar userTier={userTier} />
 
-        {/* Main Content Area */}
-        <div className="main-content">
-          <div className="content-header">
-            <h2 id="item-name">{itemName}</h2>
-          </div>
-          <div className="content-body">
-            {samplingEventId ? (
-              <>
-                {localErrorMessage && (
-                  <div className="error-message">{localErrorMessage}</div>
-                )}
+          {/* Main Content Area */}
+          <div className="main-content">
+            <div className="content-header">
+              <h2 id="item-name">{itemName}</h2>
+            </div>
+
+            {/* Display the Error Message */}
+            {displayedError && (
+              <ErrorMessage
+                message={displayedError.message}
+                onClose={displayedError.onClose}
+                className={displayedError.className}
+              />
+            )}
+
+            <div className="content-body">
+              {selectedLeftItem && selectedLeftItem.type === 'samplingEvent' ? (
                 <DropBoxes
                   onDataProcessed={handleDataProcessed}
-                  samplingEventName={itemName}
+                  sampleId={samplingEventId} // Pass sampleId instead of sampleName
                   onError={setLocalErrorMessage}
                   uploadedData={uploadedData}
                 />
-              </>
-            ) : (
-              <p className="content-body__text">
-                Select a sampling event from the sidebar to view details.
-              </p>
-            )}
+              ) : (
+                <GlobeComponent />
+              )}
+            </div>
           </div>
 
-          {showAccountActions && <AccountActions />}
+          {/* Include the RightSidebar */}
+          <RightSidebar />
         </div>
+
+        {showAccountActions && <AccountActions />}
 
         {/* Confirm Dialog for Deletion */}
         <ConfirmDialog
@@ -162,17 +199,7 @@ const MainApp: React.FC = () => {
         />
 
         {/* Context Menu for Tree Items */}
-        <ContextMenu
-          contextMenuState={contextMenuState}
-          setContextMenuState={setContextMenuState}
-          deleteItem={handleDeleteItem}
-          userTier={userTier}
-        />
-
-        {/* Global Error Message */}
-        {errorMessage && (
-          <div className="global-error-message">{errorMessage}</div>
-        )}
+        <ContextMenu deleteItem={handleDeleteItem} userTier={userTier} />
       </ErrorBoundary>
     </div>
   );

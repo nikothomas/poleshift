@@ -1,6 +1,6 @@
 // src/renderer/components/DropBoxes/DropBoxes.tsx
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Add as AddIcon,
@@ -14,27 +14,53 @@ import { Box, Typography } from '@mui/material';
 import Modal from '../Modal';
 import dropboxConfig, { DropboxConfigItem } from '../../config/dropboxConfig';
 import styles from './DropBoxes.module.css';
-import useAuth from '../../hooks/useAuth'; // Import the CSS Module
+import useAuth from '../../hooks/useAuth';
+import supabase from '../../utils/supabaseClient';
+import useUI from '../../hooks/useUI';
+import { useProcessAndUpload } from '../../utils/useProcessAndUpload';
+import DataTable from '../DataTable';
+
+interface Sample {
+  id: string;
+  name: string;
+  sampling_event_id: string;
+  org_id: string;
+  user_id: string;
+  date: string;
+  collected_datetime_local: string;
+  storage_folder: string;
+  [key: string]: any;
+}
+
+interface SamplingEvent {
+  id: string;
+  name: string;
+  date: string;
+  loc_id: string; // Added loc_id
+  [key: string]: any;
+}
+
+interface SampleLocation {
+  id: string;
+  name: string;
+  lat: number;
+  long: number;
+  [key: string]: any;
+}
 
 interface ModalState {
   isOpen: boolean;
   title: string;
-  configItem: DropboxConfigItem | null;
-  modalInputs: Record<string, string>;
-  uploadedFiles: File[];
-}
-
-interface DataModalState {
-  isOpen: boolean;
-  title: string;
-  data: any;
+  type: 'input' | 'data';
+  configItem?: DropboxConfigItem;
+  modalInputs?: Record<string, string>;
+  uploadedFiles?: File[];
+  data?: any;
 }
 
 interface DropBoxesProps {
   onDataProcessed: (output: any, configItem: DropboxConfigItem) => void;
-  sampleName: string;
   onError: (message: string) => void;
-  uploadedData: Record<string, any>;
 }
 
 interface DropBoxProps {
@@ -50,8 +76,12 @@ interface DropBoxProps {
   setProcessingState: React.Dispatch<
     React.SetStateAction<Record<string, boolean>>
   >;
-  sampleName: string;
-  onDataProcessed: (output: any, configItem: DropboxConfigItem) => void;
+  sample: Sample;
+  onDataProcessed: (
+    insertData: any,
+    configItem: DropboxConfigItem,
+    processedData: any,
+  ) => void;
   onError: (message: string) => void;
   uploadedDataItem: any;
   openDataModal: (title: string, data: any) => void;
@@ -64,44 +94,39 @@ const DropBox: React.FC<DropBoxProps> = ({
   isLocked,
   openModal,
   setProcessingState,
-  sampleName,
+  sample,
   onDataProcessed,
   onError,
   uploadedDataItem,
   openDataModal,
 }) => {
+  const { processAndUpload } = useProcessAndUpload();
+
   const onDrop = async (acceptedFiles: File[]) => {
+    if (!sample?.storage_folder) {
+      onError('Storage path not found for this sample.');
+      return;
+    }
+
     setProcessingState((prev) => ({
       ...prev,
       [configItem.id]: true,
     }));
-    try {
-      const functionName = configItem.processFunctionName;
-      const response = await window.electron.processFunction(
-        functionName,
-        sampleName,
-        {}, // No modal inputs for file uploads
-        acceptedFiles,
-      );
-      if (response.success) {
-        onDataProcessed(response.result, configItem);
-        onError('');
-      } else {
-        throw new Error(response.message || 'Processing failed');
-      }
-    } catch (error) {
-      console.error('Error processing file:', error);
-      if (error instanceof Error) {
-        onError(error.message);
-      } else {
-        onError('An unknown error occurred.');
-      }
-    } finally {
-      setProcessingState((prev) => ({
-        ...prev,
-        [configItem.id]: false,
-      }));
-    }
+
+    await processAndUpload({
+      functionName: configItem.processFunctionName,
+      sample,
+      modalInputs: {},
+      uploadedFiles: acceptedFiles,
+      configItem,
+      onDataProcessed,
+      onError,
+    });
+
+    setProcessingState((prev) => ({
+      ...prev,
+      [configItem.id]: false,
+    }));
   };
 
   const accept = configItem.expectedFileTypes || undefined;
@@ -113,8 +138,8 @@ const DropBox: React.FC<DropBoxProps> = ({
   });
 
   const handleDataClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent the parent onClick event
-    openDataModal(configItem.label, uploadedDataItem.data);
+    e.stopPropagation();
+    openDataModal(configItem.label, uploadedDataItem?.data);
   };
 
   let IconComponent: React.ReactNode;
@@ -156,18 +181,14 @@ const DropBox: React.FC<DropBoxProps> = ({
   );
 
   const handleClick = () => {
-    if (isLocked) {
-      return;
-    }
+    if (isLocked) return;
     if (configItem.isModalInput) {
       openModal(configItem.label, configItem);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (isLocked) {
-      return;
-    }
+    if (isLocked) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (configItem.isModalInput) {
@@ -176,11 +197,9 @@ const DropBox: React.FC<DropBoxProps> = ({
     }
   };
 
-  // Define tooltip message for locked DropBoxes
   const lockedTooltipMessage =
-    'Upgrade your subscription to access this feature';
+    'Unable to perform this action, please contact your organization lead';
 
-  // Conditional rendering based on whether the DropBox is a modal input or locked
   if (configItem.isModalInput || isLocked) {
     return (
       <Tooltip
@@ -188,7 +207,6 @@ const DropBox: React.FC<DropBoxProps> = ({
         disableHoverListener={!isLocked}
         arrow
       >
-        {/* Wrapping with a span to enable Tooltip on disabled elements */}
         <span style={{ width: '100%' }}>
           <Box
             className={`${styles.dropBox} ${
@@ -199,9 +217,9 @@ const DropBox: React.FC<DropBoxProps> = ({
             tabIndex={0}
             onKeyDown={handleKeyDown}
             sx={{
-              borderColor: 'grey.400', // Simplified border color
-              pointerEvents: isLocked ? 'none' : 'auto', // Disable interactions if locked
-              height: 150, // Fixed height for uniformity
+              borderColor: 'grey.400',
+              pointerEvents: isLocked ? 'none' : 'auto',
+              height: 150,
             }}
           >
             {dropBoxContent}
@@ -222,7 +240,6 @@ const DropBox: React.FC<DropBoxProps> = ({
       }
       arrow
     >
-      {/* Wrapping with a span to ensure Tooltip works even when the Box is disabled */}
       <span style={{ width: '100%' }}>
         <Box
           {...getRootProps()}
@@ -241,31 +258,118 @@ const DropBox: React.FC<DropBoxProps> = ({
   );
 };
 
-const DropBoxes: React.FC<DropBoxesProps> = ({
-  onDataProcessed,
-  sampleName,
-  onError,
-  uploadedData,
-}) => {
-  const { subscriptionLevel } = useAuth(); // Use the custom hook here
+const DropBoxes: React.FC<DropBoxesProps> = ({ onDataProcessed, onError }) => {
+  const { subscriptionLevel } = useAuth();
+  const { selectedLeftItem } = useUI();
+  const sample = selectedLeftItem?.data as Sample;
+
+  const [samplingEvent, setSamplingEvent] = useState<SamplingEvent | null>(
+    null,
+  );
+  const [sampleLocation, setSampleLocation] = useState<SampleLocation | null>(
+    null,
+  );
+
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     title: '',
-    configItem: null,
+    type: 'input',
     modalInputs: {},
-    uploadedFiles: [],
   });
 
   const [processingState, setProcessingState] = useState<
     Record<string, boolean>
   >({});
+  const [uploadedData, setUploadedData] = useState<Record<string, any>>({});
 
-  // New state for data modal
-  const [dataModalState, setDataModalState] = useState<DataModalState>({
-    isOpen: false,
-    title: '',
-    data: null,
-  });
+  const { processAndUpload } = useProcessAndUpload();
+
+  useEffect(() => {
+    if (!sample) return;
+
+    const fetchSamplingEventAndLocation = async () => {
+      // Fetch the samplingEvent that the sample belongs to
+      const { data: samplingEventData, error: samplingEventError } =
+        await supabase
+          .from('sampling_event_metadata')
+          .select('*')
+          .eq('sample_id', sample.name)
+          .single();
+
+      if (samplingEventError) {
+        console.error('Error fetching sampling event:', samplingEventError);
+        return;
+      }
+
+      const samplingEvent = samplingEventData as SamplingEvent;
+      setSamplingEvent(samplingEvent);
+
+      // Fetch the sample location using loc_id from samplingEvent
+      if (samplingEvent.loc_id) {
+        const { data: locationData, error: locationError } = await supabase
+          .from('sample_locations')
+          .select('*')
+          .eq('id', samplingEvent.loc_id)
+          .single();
+
+        if (locationError) {
+          console.error('Error fetching sample location:', locationError);
+          return;
+        }
+
+        setSampleLocation(locationData as SampleLocation);
+      } else {
+        console.warn('No loc_id found in sampling event');
+      }
+    };
+
+    fetchSamplingEventAndLocation();
+
+    const sampleId = sample.name;
+
+    const fetchAndSetProcessedData = async () => {
+      const { data, error } = await supabase
+        .from('sample_metadata')
+        .select('*')
+        .eq('sample_id', sampleId);
+
+      if (error) {
+        console.error('Error fetching processed data:', error);
+        return;
+      }
+
+      const uploadedDataMap: Record<string, any> = {};
+
+      for (const item of data) {
+        const configItem = dropboxConfig.find(
+          (config) => config.id === item.data_type,
+        );
+        if (configItem) {
+          const storagePath = item.storage_path;
+
+          const { data: fileData, error: downloadError } =
+            await supabase.storage.from('processed-data').download(storagePath);
+
+          if (downloadError) {
+            console.error('Error downloading file:', downloadError);
+            continue;
+          }
+
+          const fileText = await fileData.text();
+          const fileJson = JSON.parse(fileText);
+
+          uploadedDataMap[configItem.id] = {
+            ...item,
+            data: fileJson,
+          };
+        }
+      }
+
+      setUploadedData(uploadedDataMap);
+    };
+
+    fetchAndSetProcessedData();
+  }, [sample]);
 
   const openModal = (
     title: string,
@@ -273,38 +377,70 @@ const DropBoxes: React.FC<DropBoxesProps> = ({
     uploadedFiles: File[] = [],
   ) => {
     if (configItem.modalFields && configItem.modalFields.length > 0) {
+      // Create a copy of modalFields and add lat, long, and date fields
+      const extendedModalFields = [
+        ...configItem.modalFields,
+        // Add date field
+        {
+          name: 'date',
+          label: 'Date',
+          type: 'date',
+          tooltip: 'Date of the sample',
+        },
+        // Add latitude field
+        {
+          name: 'lat',
+          label: 'Latitude',
+          type: 'number',
+          tooltip: 'Latitude of the sample location',
+        },
+        // Add longitude field
+        {
+          name: 'long',
+          label: 'Longitude',
+          type: 'number',
+          tooltip: 'Longitude of the sample location',
+        },
+      ];
+
+      // Initialize modalInputs with default values from samplingEvent and sampleLocation
+      const initialModalInputs: Record<string, string> = {
+        date: samplingEvent?.date || '',
+        lat: sampleLocation?.lat?.toString() || '',
+        long: sampleLocation?.long?.toString() || '',
+      };
+
       setModalState({
         isOpen: true,
         title,
-        configItem,
-        modalInputs: {},
+        type: 'input',
+        configItem: {
+          ...configItem,
+          modalFields: extendedModalFields,
+        },
+        modalInputs: initialModalInputs,
         uploadedFiles,
       });
     }
+  };
+
+  const openDataModal = (title: string, data: any) => {
+    setModalState({
+      isOpen: true,
+      title: `Data for ${title}`,
+      type: 'data',
+      data,
+    });
   };
 
   const closeModal = () => {
     setModalState({
       isOpen: false,
       title: '',
-      configItem: null,
+      type: 'input',
+      configItem: undefined,
       modalInputs: {},
       uploadedFiles: [],
-    });
-  };
-
-  const openDataModal = (title: string, data: any) => {
-    setDataModalState({
-      isOpen: true,
-      title,
-      data,
-    });
-  };
-
-  const closeDataModal = () => {
-    setDataModalState({
-      isOpen: false,
-      title: '',
       data: null,
     });
   };
@@ -324,202 +460,105 @@ const DropBoxes: React.FC<DropBoxesProps> = ({
     }));
   };
 
+  const handleDataProcessed = (
+    insertData: any,
+    configItem: DropboxConfigItem,
+    processedData: any,
+  ) => {
+    setUploadedData((prev) => ({
+      ...prev,
+      [configItem.id]: {
+        ...insertData[0],
+        data: processedData.data,
+      },
+    }));
+    onError('');
+  };
+
   const handleModalSubmit = async () => {
     const { configItem, modalInputs, uploadedFiles } = modalState;
 
-    if (!configItem) return;
+    if (!configItem || !sample) return;
+
+    if (!sample.storage_folder) {
+      onError('Storage path not found for this sample.');
+      return;
+    }
 
     setProcessingState((prev) => ({
       ...prev,
       [configItem.id]: true,
     }));
 
-    try {
-      const functionName = configItem.processFunctionName;
-      const response = await window.electron.processFunction(
-        functionName,
-        sampleName,
-        modalInputs,
-        uploadedFiles,
-      );
-      if (response.success) {
-        onDataProcessed(response.result, configItem);
-        onError('');
-      } else {
-        throw new Error(response.message || 'Processing failed');
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error(error);
-        onError(error.message);
-      } else {
-        console.error(error);
-        onError('An unknown error occurred.');
-      }
-    } finally {
-      setProcessingState((prev) => ({
-        ...prev,
-        [configItem.id]: false,
-      }));
-      closeModal();
-    }
-  };
+    await processAndUpload({
+      functionName: configItem.processFunctionName,
+      sample,
+      modalInputs: modalInputs || {},
+      uploadedFiles: uploadedFiles || [],
+      configItem,
+      onDataProcessed: handleDataProcessed,
+      onError,
+    });
 
-  // Helper function to render data table
-  const renderDataTable = (data: any) => {
-    if (Array.isArray(data)) {
-      if (data.length === 0) {
-        return <Typography>No data available</Typography>;
-      }
-      const headers = Object.keys(data[0]);
-      return (
-        <Box
-          component="table"
-          sx={{
-            width: '100%',
-            borderCollapse: 'collapse',
-          }}
-        >
-          <Box component="thead">
-            <Box component="tr">
-              {headers.map((key) => (
-                <Box
-                  component="th"
-                  key={key}
-                  sx={{
-                    border: '1px solid #ddd',
-                    padding: 1,
-                    textAlign: 'left',
-                    backgroundColor: 'grey.200',
-                  }}
-                >
-                  {key}
-                </Box>
-              ))}
-            </Box>
-          </Box>
-          <Box component="tbody">
-            {data.map((item: any, index: number) => (
-              <Box component="tr" key={index}>
-                {headers.map((key) => (
-                  <Box
-                    component="td"
-                    key={key}
-                    sx={{
-                      border: '1px solid #ddd',
-                      padding: 1,
-                    }}
-                  >
-                    {String(item[key])}
-                  </Box>
-                ))}
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      );
-    }
-    if (typeof data === 'object' && data !== null) {
-      return (
-        <Box
-          component="table"
-          sx={{
-            width: '100%',
-            borderCollapse: 'collapse',
-          }}
-        >
-          <Box component="tbody">
-            {Object.entries(data).map(([key, value], index) => (
-              <Box component="tr" key={index}>
-                <Box
-                  component="th"
-                  sx={{
-                    border: '1px solid #ddd',
-                    padding: 1,
-                    textAlign: 'left',
-                    backgroundColor: 'grey.200',
-                  }}
-                >
-                  {key}
-                </Box>
-                <Box
-                  component="td"
-                  sx={{
-                    border: '1px solid #ddd',
-                    padding: 1,
-                  }}
-                >
-                  {String(value)}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      );
-    }
-    return <Typography>{String(data)}</Typography>;
+    setProcessingState((prev) => ({
+      ...prev,
+      [configItem.id]: false,
+    }));
+    closeModal();
   };
 
   return (
     <Box className={styles.dropBoxes}>
-      {dropboxConfig.map((configItem: DropboxConfigItem | undefined) => {
-        if (!configItem || !configItem.isEnabled) {
-          return null;
-        }
+      {!sample ? (
+        <Typography>Please select a sample to view DropBoxes.</Typography>
+      ) : (
+        dropboxConfig.map((configItem) => {
+          if (!configItem || !configItem.isEnabled) {
+            return null;
+          }
 
-        const isProcessing = processingState[configItem.id];
-        const hasData = uploadedData && uploadedData[configItem.id];
+          const isProcessing = processingState[configItem.id];
+          const hasData = uploadedData && uploadedData[configItem.id];
 
-        const requiredLevel = configItem.requiredSubscriptionLevel ?? 0;
-        const isLocked = subscriptionLevel < requiredLevel;
+          const requiredLevel = configItem.requiredSubscriptionLevel ?? 0;
+          const isLocked = subscriptionLevel < requiredLevel;
 
-        return (
-          <Box
-            key={configItem.id}
-            sx={{ width: { xs: '100%', sm: '48%', md: '31%' } }}
-          >
-            <DropBox
-              configItem={configItem}
-              isProcessing={isProcessing}
-              hasData={hasData}
-              isLocked={isLocked}
-              openModal={openModal}
-              setProcessingState={setProcessingState}
-              sampleName={sampleName}
-              onDataProcessed={onDataProcessed}
-              onError={onError}
-              uploadedDataItem={uploadedData[configItem.id]}
-              openDataModal={openDataModal}
-            />
-          </Box>
-        );
-      })}
+          return (
+            <Box
+              key={configItem.id}
+              sx={{ width: { xs: '100%', sm: '48%', md: '31%' }, mb: 2 }}
+            >
+              <DropBox
+                configItem={configItem}
+                isProcessing={isProcessing}
+                hasData={!!hasData}
+                isLocked={isLocked}
+                openModal={openModal}
+                setProcessingState={setProcessingState}
+                sample={sample}
+                onDataProcessed={handleDataProcessed}
+                onError={onError}
+                uploadedDataItem={uploadedData[configItem.id]}
+                openDataModal={openDataModal}
+              />
+            </Box>
+          );
+        })
+      )}
 
-      {/* Modal for input fields */}
-      {modalState.isOpen && modalState.configItem && (
+      {modalState.isOpen && (
         <Modal
           isOpen={modalState.isOpen}
           title={modalState.title}
           onClose={closeModal}
-          modalFields={modalState.configItem.modalFields}
+          modalFields={modalState.configItem?.modalFields}
           modalInputs={modalState.modalInputs}
           handleModalChange={handleModalChange}
           handleModalSubmit={handleModalSubmit}
-        />
-      )}
-
-      {/* Modal for displaying data */}
-      {dataModalState.isOpen && (
-        <Modal
-          isOpen={dataModalState.isOpen}
-          title={`Data for ${dataModalState.title}`}
-          onClose={closeDataModal}
         >
-          {dataModalState.data ? (
-            renderDataTable(dataModalState.data)
-          ) : (
-            <Typography>No data available</Typography>
-          )}
+          {modalState.type === 'data' && modalState.data ? (
+            <DataTable data={modalState.data} />
+          ) : null}
         </Modal>
       )}
     </Box>

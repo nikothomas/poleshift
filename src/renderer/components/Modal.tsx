@@ -1,22 +1,23 @@
-// src/components/Modal.tsx
+// src/renderer/components/Modal/Modal.tsx
 
 import React, { useEffect, useRef } from 'react';
-import styles from './Modal.module.css'; // Ensure you have appropriate CSS
+import Tooltip from '@mui/material/Tooltip'; // Import Tooltip from Material-UI
 
+// Updated Field interface to include a tooltip property
 interface Field {
   name: string;
   label?: string;
-  type: 'text' | 'textarea' | 'select' | 'number';
-  options?: string[]; // Only for 'select' type
+  type: 'text' | 'textarea' | 'select' | 'number' | 'date';
+  options?: { value: string; label: string }[];
+  tooltip?: string; // Tooltip property
 }
 
 interface ModalProps {
   isOpen: boolean;
   title: string;
   onClose: () => void;
-  className?: string; // Optional additional class names
+  className?: string;
 
-  // For forms
   modalFields?: Field[];
   modalInputs?: Record<string, string>;
   handleModalChange?: (
@@ -26,21 +27,22 @@ interface ModalProps {
   ) => void;
   handleModalSubmit?: () => void;
 
-  // For generic content
   children?: React.ReactNode;
 }
 
 const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  title,
-  onClose,
-  className = '',
-  modalFields,
-  modalInputs,
-  handleModalChange,
-  handleModalSubmit,
-  children,
-}) => {
+                                       isOpen,
+                                       title,
+                                       onClose,
+                                       className = '',
+
+                                       modalFields,
+                                       modalInputs,
+                                       handleModalChange,
+                                       handleModalSubmit,
+
+                                       children,
+                                     }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<
     HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
@@ -91,25 +93,25 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={styles.modalOverlay}
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className={`${styles.modal} ${className}`} ref={modalRef}>
-        <div className={styles.modalHeader}>
-          <h2 id="modal-title" className={styles.modalTitle}>
+      <div className={`modal-dialog ${className}`} ref={modalRef}>
+        <div className="modal-header">
+          <h2 id="modal-title" className="modal-title">
             {title}
           </h2>
           <button
-            className={styles.modalCloseButton}
+            className="modal-close-button"
             onClick={onClose}
             aria-label="Close Modal"
           >
             ×
           </button>
         </div>
-        <div className={styles.modalContent}>
+        <div className="modal-content">
           {modalFields &&
           modalInputs &&
           handleModalChange &&
@@ -117,11 +119,9 @@ const Modal: React.FC<ModalProps> = ({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (handleModalSubmit) {
-                  handleModalSubmit();
-                }
+                handleModalSubmit();
               }}
-              className={styles.modalForm}
+              className="modal-form"
             >
               {modalFields.map((field, index) => {
                 const hasLabel = Boolean(field.label);
@@ -133,22 +133,24 @@ const Modal: React.FC<ModalProps> = ({
                   required: true,
                   'aria-label': !hasLabel ? field.name : undefined,
                   ref: index === 0 ? firstInputRef : null,
+                  title: field.tooltip || undefined, // Tooltip support
                 };
 
                 return (
-                  <div
-                    key={field.name}
-                    className={`${styles.modalField} ${
-                      !hasLabel ? styles.modalField : ''
-                    }`}
-                  >
+                  <div key={field.name} className="modal-field">
                     {hasLabel && (
-                      <label className={styles.modalLabel} htmlFor={field.name}>
-                        {field.label}
+                      <label className="modal-label" htmlFor={field.name}>
+                        {field.tooltip ? (
+                          <Tooltip title={field.tooltip} arrow>
+                            <span>{field.label}</span>
+                          </Tooltip>
+                        ) : (
+                          field.label
+                        )}
                       </label>
                     )}
                     {field.type === 'select' ? (
-                      <select {...commonProps} className={styles.modalSelect}>
+                      <select {...commonProps} className="modal-select">
                         <option value="" disabled>
                           Select an option
                         </option>
@@ -161,45 +163,44 @@ const Modal: React.FC<ModalProps> = ({
                     ) : field.type === 'textarea' ? (
                       <textarea
                         {...commonProps}
-                        className={styles.modalTextarea}
+                        className="modal-textarea"
                         rows={5}
                         placeholder={
                           hasLabel
                             ? `Enter ${field.label?.toLowerCase()}...`
-                            : `Alice has been progressing well in math, however...`
+                            : `Enter your text here...`
                         }
                       />
                     ) : (
                       <input
                         {...commonProps}
                         type={field.type}
-                        className={styles.modalInput}
+                        className="modal-input"
                         placeholder={
                           hasLabel
                             ? `Enter ${field.label?.toLowerCase()}...`
-                            : `Alice has been progressing well in math, however...`
+                            : `Enter your input...`
                         }
                       />
                     )}
                   </div>
                 );
               })}
-              <div className={styles.modalButtons}>
+              <div className="modal-buttons">
                 <button
                   type="button"
-                  className={styles.modalCancelButton}
+                  className="modal-cancel-button"
                   onClick={onClose}
                 >
                   Cancel
                 </button>
-                <button type="submit" className={styles.modalSubmitButton}>
+                <button type="submit" className="modal-submit-button">
                   Submit
                 </button>
               </div>
             </form>
           ) : (
-            // Render children if not a form
-            <div className={styles.dataContent}>{children}</div>
+            <div className="data-content">{children}</div>
           )}
         </div>
       </div>

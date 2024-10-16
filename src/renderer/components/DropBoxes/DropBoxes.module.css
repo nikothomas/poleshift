@@ -1,7 +1,7 @@
 /* DropBoxes.module.css */
 
 /* ===================================== */
-/*        DROP BOXES & REPORT BUTTONS     */
+/*        DROP BOXES & REPORT BUTTONS    */
 /* ===================================== */
 
 /* Container for all dropboxes */
@@ -26,7 +26,6 @@
   padding: var(--spacing-lg);
   transition: border-color var(--transition-medium), background-color var(--transition-medium);
   width: 100%;
-  flex: 1 1 calc(33.333% - var(--spacing-md));
 }
 
 .dropBoxActive {
@@ -56,7 +55,8 @@
   color: var(--color-success);
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  margin-top: var(--spacing-sm);
 }
 
 /* Specific styling for the magnifying glass */
@@ -64,6 +64,7 @@
   font-size: 24px; /* Smaller size for magnifying glass */
   color: var(--color-white); /* Ensure it stays white */
   cursor: pointer;
+  margin-left: var(--spacing-xs);
 }
 
 /* Disabled dropbox */
@@ -75,6 +76,7 @@
 /* Circular Progress inside dropbox */
 .dropBoxCircularProgress {
   margin-top: var(--spacing-sm);
+  color: var(--color-primary);
 }
 
 /* Uploaded data styling */

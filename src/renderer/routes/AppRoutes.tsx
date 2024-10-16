@@ -5,7 +5,6 @@ import { Route, Routes, Navigate } from 'react-router-dom'; // No need to import
 import Loading from '../components/Loading';
 import Login from '../components/PreAuth/Login';
 import SignUp from '../components/PreAuth/SignUp';
-import SubscriptionPlans from '../components/PreAuth/SubscriptionPlans';
 import MainApp from '../components/MainApp';
 import ResetPassword from '../components/PreAuth/ResetPassword';
 import useAuth from '../hooks/useAuth';
@@ -34,7 +33,6 @@ const AppRoutes: React.FC = () => {
   // Routes accessible to authenticated users, regardless of subscription
   return (
     <Routes>
-      <Route path="/subscription-plans" element={<SubscriptionPlans />} />
       <Route path="/*" element={<MainApp />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,117 +1,46 @@
 // src/renderer/config/dropboxConfig.ts
-import { ModalField } from '../../common/types/dropboxTypes';
+
+export interface ModalField {
+  name: string;
+  label?: string;
+  type: 'text' | 'textarea' | 'select' | 'number' | 'date'; // Added 'date' type
+  options?: string[]; // Only applicable for 'select' type
+  tooltip?: string;
+}
 
 export interface DropboxConfigItem {
-  id: number; // Unique identifier
+  id: string; // Unique identifier, now using dataType
   label: string;
-  testName: string;
-  expectedFileTypes: Record<string, string[]> | null; // Adjust according to your needs
+  dataType: string; // The type of data
+  expectedFileTypes: Record<string, string[]> | null;
   isEnabled: boolean;
   isModalInput: boolean;
-  processFunctionName: string; // Optional, as it might not be present
+  processFunctionName: string;
   requiredSubscriptionLevel?: number;
-  modalFields: ModalField[]; // Defines fields in the modal
-} // Import the interface
+  modalFields: ModalField[];
+}
 
 const dropboxConfig: DropboxConfigItem[] = [
-  // Add Custom Input modal
   {
-    id: 1,
-    label: 'Custom Input',
-    testName: 'Custom Input',
+    id: 'nutrient_ammonia', // Using dataType as id
+    label: 'Nutrient (Ammonium)',
+    dataType: 'nutrient_ammonia',
     expectedFileTypes: null,
     isEnabled: true,
-    isModalInput: true, // Set to true to use modal
-    processFunctionName: 'handleCustomInput', // Ensure this function matches the ProcessFunction type
-    requiredSubscriptionLevel: 1, // Adjust as needed
+    isModalInput: true,
+    processFunctionName: 'handleNutrientAmmoniaInput',
+    requiredSubscriptionLevel: 1,
     modalFields: [
       {
-        name: 'customInput',
-        type: 'textarea', // Use 'textarea' for multi-line input
+        name: 'ammoniaValue',
+        type: 'number',
+        label: 'Ammonia Value',
+        tooltip:
+          'Please input the Ammonia value, this will be converted to Ammonium.',
       },
     ],
   },
-  {
-    id: 2,
-    label: 'Custom Input',
-    testName: 'Custom Input',
-    expectedFileTypes: null,
-    isEnabled: true,
-    isModalInput: true, // Set to true to use modal
-    processFunctionName: 'handleCustomInput', // Ensure this function matches the ProcessFunction type
-    requiredSubscriptionLevel: 1, // Adjust as needed
-    modalFields: [
-      {
-        name: 'customInput',
-        type: 'textarea', // Use 'textarea' for multi-line input
-      },
-    ],
-  },
-  {
-    id: 3,
-    label: 'Custom Input',
-    testName: 'Custom Input',
-    expectedFileTypes: null,
-    isEnabled: true,
-    isModalInput: true, // Set to true to use modal
-    processFunctionName: 'handleCustomInput', // Ensure this function matches the ProcessFunction type
-    requiredSubscriptionLevel: 1, // Adjust as needed
-    modalFields: [
-      {
-        name: 'customInput',
-        type: 'textarea', // Use 'textarea' for multi-line input
-      },
-    ],
-  },
-  {
-    id: 4,
-    label: 'Custom Input',
-    testName: 'Custom Input',
-    expectedFileTypes: null,
-    isEnabled: true,
-    isModalInput: true, // Set to true to use modal
-    processFunctionName: 'handleCustomInput', // Ensure this function matches the ProcessFunction type
-    requiredSubscriptionLevel: 1, // Adjust as needed
-    modalFields: [
-      {
-        name: 'customInput',
-        type: 'textarea', // Use 'textarea' for multi-line input
-      },
-    ],
-  },
-  {
-    id: 5,
-    label: 'Custom Input',
-    testName: 'Custom Input',
-    expectedFileTypes: null,
-    isEnabled: true,
-    isModalInput: true, // Set to true to use modal
-    processFunctionName: 'handleCustomInput', // Ensure this function matches the ProcessFunction type
-    requiredSubscriptionLevel: 1, // Adjust as needed
-    modalFields: [
-      {
-        name: 'customInput',
-        type: 'textarea', // Use 'textarea' for multi-line input
-      },
-    ],
-  },
-  {
-    id: 6,
-    label: 'Custom Input',
-    testName: 'Custom Input',
-    expectedFileTypes: null,
-    isEnabled: true,
-    isModalInput: true, // Set to true to use modal
-    processFunctionName: 'handleCustomInput', // Ensure this function matches the ProcessFunction type
-    requiredSubscriptionLevel: 1, // Adjust as needed
-    modalFields: [
-      {
-        name: 'customInput',
-        type: 'textarea', // Use 'textarea' for multi-line input
-      },
-    ],
-  },
-  // ... other configurations
+  // Add other unique entries as needed
 ];
 
 export default dropboxConfig;
