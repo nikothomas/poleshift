@@ -2,7 +2,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import supabase from './supabaseClient';
-import { sampleLocations } from '../config/sampleLocationsConfig';
 
 // Define possible item types
 export type ItemType = 'samplingEvent' | 'folder';
@@ -35,9 +34,9 @@ interface ProcessFunctions {
  */
 function formatLocalDate(date: Date): string {
   const pad = (num: number): string => String(num).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-    date.getHours(),
-  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate(),
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 /**
@@ -115,15 +114,22 @@ export const processCreateSamplingEvent = async (
 
   const newId = uuidv4(); // Generate a UUID for the sampling event
 
-  // Use sampleLocationsConfig to look up lat and long
-  const location = sampleLocations.find((loc) => loc.char_id === locCharId);
+  // Fetch loc_id from the database based on locCharId
+  const { data: locationData, error: locationError } = await supabase
+    .from('sample_locations')
+    .select('id')
+    .eq('char_id', locCharId)
+    .single();
 
-  if (!location) {
+  if (locationError) {
+    throw new Error(`Failed to fetch location data: ${locationError.message}`);
+  }
+
+  if (!locationData) {
     throw new Error(`Location with char_id ${locCharId} not found.`);
   }
 
-  const { lat } = location;
-  const { long } = location;
+  const locId = locationData.id;
 
   // Create folder paths in Supabase Storage
   const rawDataFolderPath = `${orgShortId}/${samplingEventName}/`;
@@ -190,7 +196,7 @@ export const processCreateSamplingEvent = async (
     // Format the collection date as a Date object
     const localDate = new Date(collectionDate);
 
-    // Optionally format the local datetime as a string without timezone
+    // Format the local datetime as a string without timezone
     const formattedLocalDate = formatLocalDate(localDate);
 
     // Convert the local datetime to UTC ISO string
@@ -205,12 +211,11 @@ export const processCreateSamplingEvent = async (
         org_id: orgId, // uuid
         user_id: userId, // uuid
         sample_id: samplingEventName, // text
-        lat, // double precision
-        long, // double precision
         date: formattedDate, // date
         collected_datetime_local: formattedLocalDate, // Stored as local datetime string
         storage_folder: rawDataFolderPath, // text
         collected_datetime_utc: utcDateISOString, // timestamptz (UTC)
+        loc_id: locId, // uuid of the location
       });
 
     if (insertError) {
@@ -233,8 +238,7 @@ export const processCreateSamplingEvent = async (
       collectionDate,
       locCharId,
       orgId,
-      lat,
-      long,
+      locId,
     },
   };
 };
@@ -272,7 +276,7 @@ export const processCreateFolder = async (
 
 // Export all processing functions
 export const processFunctions: ProcessFunctions = {
-  samplingEvent: processCreateSamplingEvent, // Changed key to 'samplingEvent'
-  folder: processCreateFolder, // Changed key to 'folder'
+  samplingEvent: processCreateSamplingEvent,
+  folder: processCreateFolder,
   // Add more processing functions here
 };

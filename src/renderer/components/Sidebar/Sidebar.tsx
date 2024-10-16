@@ -11,7 +11,6 @@ import SidebarTree from './SidebarTree';
 import useData from '../../hooks/useData';
 import useUI from '../../hooks/useUI';
 import { processFunctions } from '../../utils/sidebarFunctions';
-import { sampleLocations } from '../../config/sampleLocationsConfig';
 import './Sidebar.css';
 
 // Define the shape of the modal state for better type safety
@@ -29,19 +28,19 @@ interface ConfigField {
   name: string;
   label: string;
   type: string;
-  options?: { value: string; label: string }[]; // Updated to match the actual options structure
+  options?: { value: string; label: string }[];
 }
 
 interface ConfigItem {
   id: string;
   modalFields: ConfigField[];
-  processFunction?: keyof typeof processFunctions; // Ensuring type safety with keyof
+  processFunction?: keyof typeof processFunctions;
   processFileFunction?: string; // If applicable
 }
 
 const Sidebar: React.FC = () => {
-  // Use the useData hook to access addItem, fileTreeData, and setFileTreeData
-  const { addItem, fileTreeData, setFileTreeData, isSyncing } = useData();
+  // Use the useData hook to access data-related state and actions
+  const { addItem, fileTreeData, setFileTreeData, isSyncing, locations } = useData();
 
   // Use the useUI hook to access UI-related state and actions
   const {
@@ -157,28 +156,23 @@ const Sidebar: React.FC = () => {
   /**
    * Initiates the creation of a new sampling event by opening the modal
    */
-  const handleCreateSamplingEvent = useCallback(() => { // Renamed function
+  const handleCreateSamplingEvent = useCallback(() => {
     const configItem: ConfigItem = {
-      id: 'create-samplingEvent', // Updated ID for clarity
+      id: 'create-samplingEvent',
       modalFields: [
         { name: 'collectionDate', label: 'Collection Date', type: 'date' },
         {
           name: 'locCharId',
           label: 'Location',
           type: 'select',
-          options: sampleLocations
-            .filter((location) => location.isEnabled)
-            .map((location) => ({
-              value: location.char_id, // Use 'char_id' as the value
-              label: location.label,
-            })),
+          options: locations, // Use the fetched locations from context
         },
       ],
-      processFunction: 'samplingEvent', // Updated from 'sample' to 'samplingEvent'
+      processFunction: 'samplingEvent',
     };
 
     openModal('Create New Sampling Event', configItem);
-  }, [openModal]);
+  }, [locations]); // Include locations as a dependency
 
   /**
    * Initiates the creation of a new folder by opening the modal
@@ -187,7 +181,7 @@ const Sidebar: React.FC = () => {
     const configItem: ConfigItem = {
       id: 'create-folder',
       modalFields: [{ name: 'name', label: 'Folder Name', type: 'text' }],
-      processFunction: 'folder', // Updated from 'processCreateFolder' to 'folder'
+      processFunction: 'folder',
     };
 
     openModal('Create New Folder', configItem);
@@ -201,9 +195,7 @@ const Sidebar: React.FC = () => {
       {/* Syncing Status Icon */}
       <div className="sync-status-icon">
         <Tooltip title={isSyncing ? 'Syncing data...' : 'All changes saved'}>
-          <SyncIcon
-            className={`sync-icon ${isSyncing ? 'syncing' : ''}`}
-          />
+          <SyncIcon className={`sync-icon ${isSyncing ? 'syncing' : ''}`} />
         </Tooltip>
       </div>
 
@@ -219,10 +211,7 @@ const Sidebar: React.FC = () => {
           onCreateFolder={handleCreateFolder}
         />
         {/* Tree View of Files and Folders */}
-        <SidebarTree
-          treeData={fileTreeData}
-          setTreeData={setFileTreeData}
-        />
+        <SidebarTree treeData={fileTreeData} setTreeData={setFileTreeData} />
       </div>
 
       {/* Modal for Creating Sampling Events and Folders */}
@@ -235,7 +224,7 @@ const Sidebar: React.FC = () => {
           modalInputs={modalState.modalInputs}
           handleModalChange={handleModalChange}
           handleModalSubmit={handleModalSubmit}
-          isProcessing={modalState.isProcessing} // Optionally, disable inputs or show a loader
+          isProcessing={modalState.isProcessing}
         />
       )}
     </>

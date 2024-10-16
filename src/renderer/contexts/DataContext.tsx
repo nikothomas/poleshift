@@ -13,9 +13,16 @@ import { ExtendedTreeItem, processFunctions } from '../utils/sidebarFunctions';
 import { AuthContext } from './AuthContext';
 import supabase from '../utils/supabaseClient';
 
+// Define the interface for location options
+interface LocationOption {
+  value: string;
+  label: string;
+}
+
 export interface SamplingEvent {
   id: string;
   name: string;
+  loc_id: string; // Store location ID
   data: { [key: string]: any };
 }
 
@@ -33,7 +40,8 @@ export interface DataContextType {
     inputs: Record<string, string>,
   ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
-  isSyncing: boolean; // Added to track syncing status
+  isSyncing: boolean;
+  locations: LocationOption[]; // Include locations in the context
 }
 
 export const DataContext = createContext<DataContextType | undefined>(
@@ -57,7 +65,35 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [samplingEventData, setSamplingEventData] = useState<SamplingEventData>(
     {},
   );
-  const [isSyncing, setIsSyncing] = useState<boolean>(false); // State to track syncing
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  // State to hold the fetched locations from the database
+  const [locations, setLocations] = useState<LocationOption[]>([]);
+
+  // Fetch sample locations from Supabase when the component mounts
+  useEffect(() => {
+    const fetchLocations = async () => {
+      const { data, error } = await supabase
+        .from('sample_locations')
+        .select('char_id, label')
+        .eq('is_enabled', true);
+
+      if (error) {
+        console.error('Error fetching sample locations:', error.message);
+        // Handle error as needed
+      } else if (data) {
+        const formattedLocations = data.map(
+          (location: { char_id: string; label: string }) => ({
+            value: location.char_id,
+            label: location.label,
+          }),
+        );
+        setLocations(formattedLocations);
+      }
+    };
+
+    fetchLocations();
+  }, []);
 
   /**
    * Function to load tree data from Supabase
@@ -281,8 +317,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           );
         }
 
-        if (!userOrgId || !userOrgShortId) {
-          throw new Error('User organization information is missing.');
+        if (!user || !userOrgId || !userOrgShortId) {
+          throw new Error('User or organization information is missing.');
         }
 
         // Call the processing function with required parameters
@@ -307,6 +343,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           const newSamplingEvent: SamplingEvent = {
             id: newItem.id,
             name: newItem.text,
+            loc_id: inputs.locCharId, // Store locCharId as loc_id
             data: newItem.data || {},
           };
 
@@ -314,6 +351,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             ...prevSamplingEventData,
             [newSamplingEvent.id]: newSamplingEvent,
           }));
+
+          // Save the sampling event to Supabase
+          await supabase.from('sampling_event_metadata').insert({
+            id: newSamplingEvent.id,
+            org_id: userOrgId,
+            user_id: user.id,
+            sample_id: newSamplingEvent.name,
+            loc_id: newSamplingEvent.loc_id,
+            // Include other fields as necessary
+          });
         }
 
         console.log(`Added new item of type "${type}" with ID: ${newItem.id}`);
@@ -327,6 +374,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       saveTreeData,
       setFileTreeData,
       setSamplingEventData,
+      user,
       userOrgId,
       userOrgShortId,
     ],
@@ -369,6 +417,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           return newSamplingEventData;
         });
 
+        // Optionally, delete the sampling event from Supabase
+        await supabase.from('sampling_event_metadata').delete().eq('id', id);
+
         console.log(`Removed item with ID: ${id} from tree data`);
       } catch (error: any) {
         console.error(`Error deleting item with ID ${id}:`, error);
@@ -387,7 +438,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setSamplingEventData,
         addItem,
         deleteItem,
-        isSyncing, // Expose isSyncing state to the context
+        isSyncing,
+        locations, // Provide locations in the context
       }}
     >
       {children}
