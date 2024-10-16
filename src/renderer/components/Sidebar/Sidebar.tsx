@@ -10,7 +10,7 @@ import SidebarButtons from './SidebarButtons';
 import SidebarTree from './SidebarTree';
 import useData from '../../hooks/useData';
 import useUI from '../../hooks/useUI';
-import { processFunctions } from '../../utils/sidebarFunctions';
+import { ItemType } from '../../contexts/DataContext'; // Import ItemType from DataContext
 import './Sidebar.css';
 
 // Define the shape of the modal state for better type safety
@@ -34,7 +34,7 @@ interface ConfigField {
 interface ConfigItem {
   id: string;
   modalFields: ConfigField[];
-  processFunction?: keyof typeof processFunctions;
+  processFunctionType?: ItemType; // Use ItemType for processFunctionType
   processFileFunction?: string; // If applicable
 }
 
@@ -131,9 +131,9 @@ const Sidebar: React.FC = () => {
     }));
 
     try {
-      if (configItem?.processFunction) {
+      if (configItem?.processFunctionType) {
         // Use addItem from DataContext to handle adding items
-        await addItem(configItem.processFunction, modalInputs);
+        await addItem(configItem.processFunctionType, modalInputs);
         // Clear any global error messages if applicable
         setErrorMessage('');
       } else if (configItem?.processFileFunction) {
@@ -165,10 +165,13 @@ const Sidebar: React.FC = () => {
           name: 'locCharId',
           label: 'Location',
           type: 'select',
-          options: locations, // Use the fetched locations from context
+          options: locations.map((loc) => ({
+            value: loc.char_id,
+            label: loc.label,
+          })),
         },
       ],
-      processFunction: 'samplingEvent',
+      processFunctionType: 'samplingEvent',
     };
 
     openModal('Create New Sampling Event', configItem);
@@ -181,7 +184,7 @@ const Sidebar: React.FC = () => {
     const configItem: ConfigItem = {
       id: 'create-folder',
       modalFields: [{ name: 'name', label: 'Folder Name', type: 'text' }],
-      processFunction: 'folder',
+      processFunctionType: 'folder',
     };
 
     openModal('Create New Folder', configItem);
