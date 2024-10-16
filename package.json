@@ -92,7 +92,6 @@
     }
   },
   "dependencies": {
-    "@electron/notarize": "^2.3.2",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@minoru/react-dnd-treeview": "^3.4.4",
@@ -118,6 +117,7 @@
     "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "@electron/notarize": "^2.5.0",
     "@electron/rebuild": "^3.3.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.11",
     "@svgr/webpack": "^8.1.0",
