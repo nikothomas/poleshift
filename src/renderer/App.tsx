@@ -1,4 +1,4 @@
-// src/renderer/App.tsx
+// src/App.tsx
 
 import React from 'react';
 import { HashRouter as Router } from 'react-router-dom';

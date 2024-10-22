@@ -410,36 +410,30 @@ ul, li {
 /* ===================================== */
 
 .right-sidebar {
+  position: fixed; /* Fixed to viewport */
+  top: 0;
+  right: 0;
   width: 250px;
-  flex-shrink: 0;
+  height: 100%;
   background-color: var(--color-sidebar);
   color: var(--color-text);
   display: flex;
   flex-direction: column;
   padding-top: 60px;
-  transition: width var(--transition-medium);
+  transition: transform 0.3s ease-in-out; /* Transition on transform */
+  transform: translateX(0); /* Visible state */
+  z-index: 1000; /* Ensure it overlays other content */
   overflow: hidden;
 }
 
 .right-sidebar.collapsed {
-  width: 0;
+  transform: translateX(100%); /* Move sidebar out of view */
 }
 
-.right-sidebar-toggle-button {
+.right-sidebar__close-button {
   position: absolute;
   top: 15px;
   right: 15px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  transition: color var(--transition-medium);
-  z-index: 1001;
-  color: var(--color-text);
-}
-
-.right-sidebar-toggle-button:hover {
-  color: var(--color-primary);
 }
 
 .right-sidebar__content {

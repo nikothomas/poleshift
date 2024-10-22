@@ -1,4 +1,4 @@
-// src/contexts/UIContext.tsx
+// src/renderer/contexts/UIContext.tsx
 
 import React, {
   createContext,
@@ -36,12 +36,6 @@ interface ContextMenuState {
   itemId: string | null;
 }
 
-interface ContextMenuProps {
-  contextMenuState: ContextMenuState;
-  setContextMenuState: React.Dispatch<React.SetStateAction<ContextMenuState>>;
-  deleteItem: (id: string) => void;
-}
-
 export interface UIContextType {
   selectedLeftItem: any; // Left sidebar (sampling event)
   setSelectedLeftItem: React.Dispatch<React.SetStateAction<any>>;
@@ -51,6 +45,8 @@ export interface UIContextType {
   toggleSidebar: () => void;
   isRightSidebarCollapsed: boolean;
   toggleRightSidebar: () => void;
+  openRightSidebar: () => void; // **New Method**
+  closeRightSidebar: () => void; // **New Method**
   modalState: ModalState;
   openModal: (title: string, fields: Field[], callback?: () => void) => void;
   closeModal: () => void;
@@ -75,7 +71,7 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
   const [selectedRightItem, setSelectedRightItem] = useState<any>(null); // For right sidebar (locations)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState<boolean>(
-    false,
+    true, // **Initialize as collapsed**
   ); // New state
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -105,6 +101,14 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
 
   const toggleRightSidebar = useCallback(() => {
     setIsRightSidebarCollapsed((prev) => !prev);
+  }, []);
+
+  const openRightSidebar = useCallback(() => {
+    setIsRightSidebarCollapsed(false);
+  }, []);
+
+  const closeRightSidebar = useCallback(() => {
+    setIsRightSidebarCollapsed(true);
   }, []);
 
   const openModal = useCallback(
@@ -139,6 +143,8 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
       toggleSidebar,
       isRightSidebarCollapsed,
       toggleRightSidebar,
+      openRightSidebar, // **Include in context**
+      closeRightSidebar, // **Include in context**
       modalState,
       openModal,
       closeModal,
@@ -160,6 +166,8 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
       toggleSidebar,
       isRightSidebarCollapsed,
       toggleRightSidebar,
+      openRightSidebar,
+      closeRightSidebar,
       modalState,
       openModal,
       closeModal,

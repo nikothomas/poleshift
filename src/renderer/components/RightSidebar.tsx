@@ -1,6 +1,4 @@
-// src/renderer/components/RightSidebar.tsx
-
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import CloseIcon from '@mui/icons-material/Close'; // Using Material UI icons
 import IconButton from '@mui/material/IconButton';
 import useUI from '../hooks/useUI';
@@ -11,33 +9,36 @@ const RightSidebar: React.FC = () => {
     selectedRightItem,
     setSelectedRightItem,
     isRightSidebarCollapsed,
-    toggleRightSidebar,
+    closeRightSidebar,
   } = useUI();
   const { samplingEventData } = useData();
 
   const closeSidebar = useCallback(() => {
     setSelectedRightItem(null);
-    // We can remove toggleRightSidebar if we're not collapsing
-    // toggleRightSidebar();
-  }, [setSelectedRightItem]);
+    closeRightSidebar();
+    console.log('Sidebar closed.');
+  }, [setSelectedRightItem, closeRightSidebar]);
 
-  // If no location is selected, don't render the sidebar
+  // Move useEffect above any conditional returns
+  useEffect(() => {
+    if (selectedRightItem && !isRightSidebarCollapsed) {
+      console.log('RightSidebar is now visible.');
+    }
+  }, [selectedRightItem, isRightSidebarCollapsed]);
+
+  // Keep the early return after the hooks
   if (!selectedRightItem) {
     return null;
   }
 
-  // Filter sampling events that match the selected location
   const samplesAtLocation = Object.values(samplingEventData).filter(
     (event) => event.loc_id === selectedRightItem.id,
   );
 
   return (
     <div
-      className={`right-sidebar ${
-        isRightSidebarCollapsed ? 'collapsed' : ''
-      }`}
+      className={`right-sidebar ${isRightSidebarCollapsed ? 'collapsed' : ''}`}
     >
-      {/* Close Button inside the sidebar */}
       <IconButton
         className="right-sidebar__close-button"
         onClick={closeSidebar}
@@ -49,7 +50,7 @@ const RightSidebar: React.FC = () => {
       <div className="right-sidebar__content">
         <h2>{selectedRightItem.label}</h2>
         <p>
-          <strong>Location ID:</strong> {selectedRightItem.id}
+          <strong>Location ID:</strong> {selectedRightItem.char_id}
         </p>
         <p>
           <strong>Latitude:</strong> {selectedRightItem.lat}

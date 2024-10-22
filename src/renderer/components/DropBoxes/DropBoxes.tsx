@@ -17,7 +17,7 @@ import styles from './DropBoxes.module.css';
 import useAuth from '../../hooks/useAuth';
 import supabase from '../../utils/supabaseClient';
 import useUI from '../../hooks/useUI';
-import { useProcessAndUpload } from '../../utils/useProcessAndUpload';
+import { useProcessAndUpload } from '../../hooks/useProcessAndUpload.ts';
 import DataTable from '../DataTable';
 
 interface Sample {

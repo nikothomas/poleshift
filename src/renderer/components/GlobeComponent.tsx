@@ -1,13 +1,15 @@
-import React, { useEffect, useRef, useContext } from 'react';
+// src/renderer/components/GlobeComponent.tsx
+
+import React, { useEffect, useRef } from 'react';
 import Globe from 'react-globe.gl';
+import globe from 'assets/globe.jpg';
 import useData from '../hooks/useData';
 import useUI from '../hooks/useUI';
-import globe from './world.200409.3x21600x10800.png';
 
 const GlobeComponent: React.FC = () => {
   const globeRef = useRef<any>(null);
   const { samplingEventData, locations } = useData();
-  const { setSelectedRightItem, isRightSidebarCollapsed, toggleRightSidebar } = useUI();
+  const { setSelectedRightItem, openRightSidebar } = useUI(); // **Destructure openRightSidebar**
 
   // Extract the set of location IDs that have sampling events
   const locIdsWithSamplingEvents = new Set(
@@ -15,6 +17,7 @@ const GlobeComponent: React.FC = () => {
   );
 
   // Prepare data for plotting
+  console.log(locations);
   const pointsData = locations
     .filter(
       (loc) =>
@@ -56,11 +59,10 @@ const GlobeComponent: React.FC = () => {
   const handlePointClick = (point: any) => {
     const selectedLocation = locations.find((loc) => loc.id === point.id);
     if (selectedLocation) {
+      console.log('Point clicked:', selectedLocation);
       setSelectedRightItem(selectedLocation);
-      // Automatically expand the right sidebar if it's collapsed
-      if (isRightSidebarCollapsed) {
-        toggleRightSidebar();
-      }
+      openRightSidebar(); // **Explicitly open the sidebar**
+      console.log('Sidebar should now be open.');
     }
   };
 

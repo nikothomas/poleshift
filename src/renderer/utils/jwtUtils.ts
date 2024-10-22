@@ -1,4 +1,4 @@
-// src/utils/jwtUtils.js
+// src/renderer/utils/jwtUtils.js
 import jwtDecode from 'jwt-decode';
 
 export const getUserClaims = (accessToken) => {

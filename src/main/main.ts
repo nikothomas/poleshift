@@ -212,8 +212,11 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
+    // Remove or adjust width and height as needed
     width: 1024,
     height: 728,
+    // **Add the fullscreen property below**
+    fullscreen: true, // This ensures the window opens in fullscreen mode
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'), // Adjusted path
@@ -232,6 +235,8 @@ const createWindow = async () => {
       mainWindow.minimize();
     } else {
       mainWindow.show();
+      // **Optional:** Ensure fullscreen is activated when showing the window
+      mainWindow.setFullScreen(true);
     }
   });
 
