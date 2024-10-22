@@ -1,5 +1,4 @@
 // src/main/main.ts
-/* eslint global-require: off, no-console: off, promise/always-return: off */
 
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, safeStorage } from 'electron';
@@ -7,7 +6,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import Store from 'electron-store';
 import crypto from 'crypto';
-import fs from 'fs';
+import fs from 'fs/promises'; // Use promises version for async/await
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import IpcMainInvokeEvent = Electron.IpcMainInvokeEvent;
@@ -111,7 +110,7 @@ ipcMain.handle(
       const tempDir = os.tmpdir();
       const filePath = path.join(tempDir, fileName);
 
-      await fs.promises.writeFile(filePath, Buffer.from(fileBuffer));
+      await fs.writeFile(filePath, Buffer.from(fileBuffer));
 
       return { success: true, filePath };
     } catch (error: any) {
@@ -145,6 +144,7 @@ ipcMain.handle('electron-store-set', async (event, key: string, value: any) => {
   }
 });
 
+// IPC Handler for 'process-function'
 ipcMain.handle(
   'process-function',
   async (
@@ -171,6 +171,25 @@ ipcMain.handle(
   },
 );
 
+// IPC Handler for 'get-globe-tile' (Lazy Loading)
+ipcMain.handle('get-globe-tile', async (event, tileId: string) => {
+  try {
+    const validTileIds = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2'];
+    if (!validTileIds.includes(tileId)) {
+      throw new Error(`Invalid tile ID: ${tileId}`);
+    }
+
+    const TILE_DIR = path.join('assets', 'tiles');
+    const tilePath = path.join(TILE_DIR, `${tileId}.jpg`);
+    const tileBuffer = await fs.readFile(tilePath);
+    const tileBase64 = tileBuffer.toString('base64');
+
+    return { success: true, data: tileBase64 };
+  } catch (error: any) {
+    console.error(`Error fetching tile ${tileId}:`, error);
+    return { success: false, message: error.message };
+  }
+});
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');

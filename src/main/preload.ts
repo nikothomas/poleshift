@@ -55,4 +55,9 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('encrypt-and-store', userId, key, value),
   retrieveAndDecrypt: (userId: string, key: string) =>
     ipcRenderer.invoke('retrieve-and-decrypt', userId, key),
+
+  // Expose the tile loading API
+  getGlobeTile: async (tileId: string): Promise<{ success: boolean; data?: string; message?: string }> => {
+    return ipcRenderer.invoke('get-globe-tile', tileId);
+  },
 });
